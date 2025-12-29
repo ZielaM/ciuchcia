@@ -3,6 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { VoxelMap } from "../components/VoxelMap";
+import { Train } from "../components/Train";
 
 export default function Home() {
   return (
@@ -12,6 +13,8 @@ export default function Home() {
         <directionalLight position={[10, 10, 5]} intensity={1} />
 
         <VoxelMap />
+
+        <Train />
 
         <OrbitControls />
       </Canvas>
