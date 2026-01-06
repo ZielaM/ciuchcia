@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+.font-pixel {
+  font-family: var(--font-vt323), monospace;
+}
+
 html,
 body {
   width: 100%;
