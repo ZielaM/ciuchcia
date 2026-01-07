@@ -34,6 +34,14 @@ const STATION_DATA: StationData[] = [
     { label: "Finał", desc: "Koleje dużych prędkości." },
 ];
 
+// CONSTANTS FOR GEOMETRY & TRACK
+const TURN_RADIUS = 5;
+const TRANSITION = 3;
+const SIGN_TRACK_GAP = 3;
+const K = 0.55228475;
+const LEAD_IN = 9;
+const TRACK_START_Z = -10; // Unified Start Position
+
 function AlignmentAutopilot({
     targetT,
     progress,
@@ -109,7 +117,10 @@ function SceneContent() {
 
     // Branch State
     const [currentSubIndex, setCurrentSubIndex] = useState(0);
-    const [isReturning, setIsReturning] = useState(false); // Fix 5: Animation State
+    const [isReturning, setIsReturning] = useState(false);
+
+    // Distinguish between "Aligning to Enter" and "Aligning to Park"
+    const [pendingEntry, setPendingEntry] = useState<number | null>(null);
 
     // REFS for progress
     const mainProgress = useRef(0);
@@ -120,7 +131,7 @@ function SceneContent() {
     // Generate Curve: Vertical Line at x = trackX
     const curve = useMemo(() => {
         const points = [
-            new THREE.Vector3(trackX, 0.6, -13),
+            new THREE.Vector3(trackX, 0.6, TRACK_START_Z),
             new THREE.Vector3(trackX, 0.6, trackLength + 10),
         ];
         return new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.5);
@@ -135,7 +146,7 @@ function SceneContent() {
 
         for (let i = 0; i < STATION_DATA.length; i++) {
             const zPos = i * spacing;
-            const startZ = -10;
+            const startZ = TRACK_START_Z;
             // t = distance from start / total length
             const t = Math.max(0, Math.min(1, (zPos - startZ) / realCurveLength));
             arr.push(t);
@@ -147,11 +158,11 @@ function SceneContent() {
     // --- BRANCH TRACKS GENERATION ---
 
     // CONSTANTS FOR GEOMETRY FIRST APPROACH
-    const TURN_RADIUS = 5;
-    const TRANSITION = 3;
-    const SIGN_TRACK_GAP = 4; // REDUCED GAP (User feedback: "Sign too high")
-    const K = 0.55228475;
-    const LEAD_IN = 9;
+    // const TURN_RADIUS = 5; // Moved to global
+    // const TRANSITION = 3; // Moved to global
+    // const SIGN_TRACK_GAP = 3; // REDUCED GAP (User feedback: "Sign too high") // Moved to global
+    // const K = 0.55228475; // Moved to global
+    // const LEAD_IN = 9; // Moved to global
 
     const branchCurves = useMemo(() => {
         const curves: { [key: number]: THREE.Curve<THREE.Vector3> } = {};
@@ -232,6 +243,7 @@ function SceneContent() {
 
     const handleEnterBranch = (index: number) => {
         setAligningTo(index);
+        setPendingEntry(index);
         setIsReturning(false);
     };
 
@@ -242,10 +254,28 @@ function SceneContent() {
     const finalizeReturnToMain = () => {
         setIsReturning(false);
         if (typeof activeTrack === 'number') {
-            const returnT = stops[activeTrack];
-            mainProgress.current = returnT;
+            const returnedFromIndex = activeTrack;
+
+            // 1. Calculate precise re-entry point (Switch Z)
+            const mainSignZ = returnedFromIndex * spacing;
+            const targetStraightZ = mainSignZ + SIGN_TRACK_GAP;
+            const startZ = targetStraightZ - TRANSITION - TURN_RADIUS;
+
+            // 2. Map startZ to main t
+            // t = (Z - startZ_World) / Length
+            const p1z = TRACK_START_Z;
+            const tSwitch = (startZ - p1z) / mainCurveLength;
+
+            // 3. Set Position to Switch
+            mainProgress.current = tSwitch;
+
+            // 4. Switch Context to Main
             setActiveTrack('main');
             setCurrentSubIndex(0);
+
+            // 5. Trigger Autopilot to Drive to Station ("Park")
+            setPendingEntry(null);
+            setAligningTo(returnedFromIndex);
         }
     };
 
@@ -328,7 +358,14 @@ function SceneContent() {
                 curveLength={mainCurveLength}
                 speed={25}
                 onComplete={() => {
-                    if (aligningTo !== null) performSwitch(aligningTo);
+                    if (aligningTo !== null) {
+                        if (pendingEntry === aligningTo) {
+                            performSwitch(aligningTo);
+                        } else {
+                            // Just Parking
+                            setAligningTo(null);
+                        }
+                    }
                 }}
             />
 
