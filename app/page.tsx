@@ -423,6 +423,7 @@ function SceneContent() {
             <FollowCamera
                 curve={currentCurve}
                 progress={currentProgress}
+                isBranch={activeTrack !== 'main'}
             />
         </>
     );
