@@ -5,7 +5,7 @@ import { VoxelMap } from "../components/VoxelMap";
 import { Train } from "../components/Train";
 import { TrackSystem } from "../components/TrackSystem";
 import * as THREE from "three";
-import { useRef, useMemo, useState } from "react";
+import { useRef, useMemo, useState, Suspense } from "react";
 import { FollowCamera } from "../components/FollowCamera";
 import { StationSign } from "../components/StationSign";
 import { ScrollControls, useScroll } from "@react-three/drei";
@@ -20,7 +20,7 @@ export interface StationData {
 
 const STATION_DATA: StationData[] = [
     { label: "Wstęp", desc: "Witamy w Voxel Train!" },
-    { label: "Rozdział 1", desc: "Początki kolei parowej." },
+    { label: "Rozdział 1", desc: "Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. Początki kolei parowej. " },
     {
         label: "Rozdział 2",
         desc: "Rewolucja Przemysłowa.",
@@ -37,7 +37,7 @@ const STATION_DATA: StationData[] = [
 // CONSTANTS FOR GEOMETRY & TRACK
 const TURN_RADIUS = 5;
 const TRANSITION = 3;
-const SIGN_TRACK_GAP = 3;
+const SIGN_TRACK_GAP = 5;
 const K = 0.55228475;
 const LEAD_IN = 9;
 const TRACK_START_Z = -10; // Unified Start Position
@@ -95,10 +95,33 @@ export default function Home() {
                 SCROLL TO MOVE
             </div>
 
-            <Canvas camera={{ position: [0, 16, 0], fov: 50 }}>
-                <LayoutProvider stationCount={STATION_DATA.length}>
-                    <SceneContent />
-                </LayoutProvider>
+            <Canvas camera={{ position: [0, 16, 0], fov: 50 }} shadows>
+                {/* DARKER SCENE + BRIGHT FRAMES (via Emissive) */}
+                <ambientLight intensity={0.2} color="#ffffff" />
+
+                {/* Main Sun: Darker to create mood */}
+                <directionalLight
+                    position={[15, 20, 10]}
+                    intensity={0.6}
+                    castShadow
+                    shadow-mapSize={[2048, 2048]}
+                    shadow-bias={-0.0001}
+                    color="#fffaf0"
+                />
+
+                {/* Fill Light: Barely visible */}
+                <directionalLight
+                    position={[-15, 10, -10]}
+                    intensity={0.1}
+                    color="#e0f0ff"
+                />
+
+                <Suspense fallback={null}>
+                    {/* Environment removed to prevent overexposure */}
+                    <LayoutProvider stationCount={STATION_DATA.length}>
+                        <SceneContent />
+                    </LayoutProvider>
+                </Suspense>
             </Canvas>
         </main>
     );
@@ -156,13 +179,6 @@ function SceneContent() {
 
 
     // --- BRANCH TRACKS GENERATION ---
-
-    // CONSTANTS FOR GEOMETRY FIRST APPROACH
-    // const TURN_RADIUS = 5; // Moved to global
-    // const TRANSITION = 3; // Moved to global
-    // const SIGN_TRACK_GAP = 3; // REDUCED GAP (User feedback: "Sign too high") // Moved to global
-    // const K = 0.55228475; // Moved to global
-    // const LEAD_IN = 9; // Moved to global
 
     const branchCurves = useMemo(() => {
         const curves: { [key: number]: THREE.Curve<THREE.Vector3> } = {};

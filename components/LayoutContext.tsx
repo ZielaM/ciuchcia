@@ -11,6 +11,7 @@ interface LayoutMetrics {
     vpHeight: number;     // Viewport height at y=0 plane
     trackLength: number;  // Total length of the track
     spacing: number;      // Spacing between stations
+    // Height heuristic for StationSign: 1.8 + lines * 0.42 (Min 4.0)
 }
 
 const LayoutContext = createContext<LayoutMetrics | null>(null);
@@ -70,8 +71,8 @@ export function LayoutProvider({ children, stationCount }: { children: ReactNode
         signWidth,
         vpWidth,
         vpHeight,
-        trackLength,
-        spacing
+        trackLength: (stationCount * spacing) + 10,
+        spacing, // Export the dynamic spacing
     };
 
     return (
