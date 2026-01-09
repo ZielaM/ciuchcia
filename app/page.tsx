@@ -10,6 +10,7 @@ import { FollowCamera } from "../components/FollowCamera";
 import { StationSign } from "../components/StationSign";
 import { ScrollControls, useScroll } from "@react-three/drei";
 import { LayoutProvider, useLayout } from "../components/LayoutContext";
+import { BufferStop } from "../components/BufferStop";
 
 // Define stops relative to station count
 export interface StationData {
@@ -19,7 +20,7 @@ export interface StationData {
 }
 
 const STATION_DATA: StationData[] = [
-    { label: "Wstęp", desc: "Witamy w Voxel Train!" },
+    { label: "Witaj w ZSK", desc: "Rozpoczynamy podróż po Twoją przyszłość w Zespole Szkół Komunikacji. Tutaj, blok po bloku, budujemy kompetencje jutra. Jesteśmy miejscem, gdzie łączy się ponad 75-letnia tradycja z najnowocześniejszymi technologiami: od kolejnictwa, przez automatykę, aż po zaawansowane IT. Przejedź się po naszych profilach, poznaj możliwości i wybierz kierunek, który nada pęd Twojej karierze." },
     {
         label: "Technik szerokopasmowej komunikacji elektronicznej",
         desc: "Powszechny dostęp do szybkiego, szerokopasmowego Internetu we współczesnych gospodarkach na świecie staje się jedną z najważniejszych dziedzin, bez których nie może istnieć nowoczesne społeczeństwo. Obecnie kluczowy w tym kontekście staje się problem, w jaki sposób taki dostęp zapewnić. Technik szerokopasmowej komunikacji elektronicznej to zawód interdyscyplinarny łączący umiejętności kilku specjalności (elektronika, informatyka, telekomunikacja). Odnosi się do bezpośredniej wymiany informacji elektronicznej między ludźmi i urządzeniami przy wykorzystaniu łączności przewodowej, bezprzewodowej lub hybrydowej. W zakresie umiejętności technik będzie budował infrastrukturę zapewniającą przepustowość łączy o dużej prędkości pod: sztuczną inteligencję, telewizję wysokiej rozdzielczości (VOD), e-lerning, połączenia machine-to-machine (M2M) oraz video konferencjami biznesowymi.",
@@ -584,6 +585,42 @@ function SceneContent() {
             {Object.values(branchCurves).map((branchCurve, i) => (
                 <TrackSystem key={i} curve={branchCurve} debug={false} />
             ))}
+
+            {/* --- BUFFER STOPS --- */}
+
+            {/* 1. Main Track Start (Facing +Z, towards train) */}
+            <BufferStop
+                position={new THREE.Vector3(trackX, 0.6, TRACK_START_Z)}
+                rotation={new THREE.Euler(0, 0, 0)}
+            />
+
+            {/* 2. Main Track End (Facing -Z, towards incoming train) */}
+            {/* Main curve end point defined in curve useMemo: trackLength + 10 */}
+            <BufferStop
+                position={new THREE.Vector3(trackX, 0.6, trackLength + 10)}
+                rotation={new THREE.Euler(0, Math.PI, 0)}
+            />
+
+            {/* 3. Branch Ends */}
+            {Object.entries(branchCurves).map(([key, bCurve]) => {
+                const endPoint = bCurve.getPoint(1);
+                // Calculate Rotation: Face AGAINST the tangent
+                // Tangent at end (t=1)
+                const tangent = bCurve.getTangent(1);
+                // Angle of tangent
+                const angle = Math.atan2(tangent.x, tangent.z);
+                // We want Local Z (Red Lights) to face -Tangent.
+                // -Tangent angle = angle + PI.
+                const rotY = angle + Math.PI;
+
+                return (
+                    <BufferStop
+                        key={`buffer-branch-${key}`}
+                        position={endPoint}
+                        rotation={new THREE.Euler(0, rotY, 0)}
+                    />
+                );
+            })}
 
             <FollowCamera
                 curve={currentCurve}
