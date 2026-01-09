@@ -81,7 +81,7 @@ export function StationSign({ position, label, description, width = 4, subChapte
                 <group position={[0, 0.5, 0.15]}>
                     {/* TITLE */}
                     <Text
-                        position={[0, (frameHeight / 2) - 1.5, 0]}
+                        position={[0, (frameHeight / 2) - 1.0, 0]}
                         anchorY="top"
                         textAlign="center"
                         fontSize={0.8}
@@ -97,7 +97,7 @@ export function StationSign({ position, label, description, width = 4, subChapte
                     {/* DESCRIPTION */}
                     {description && (
                         <Text
-                            position={[0, (frameHeight / 2) - 2.5, 0]}
+                            position={[0, (frameHeight / 2) - 2.0, 0]}
                             anchorY="top"
                             textAlign="center"
                             fontSize={0.35}
