@@ -79,7 +79,7 @@ export function FollowCamera({ curve, progress, isBranch }: FollowCameraProps) {
         // 7. LookAt
         // Standard Top-Down Look
         camera.lookAt(camera.position.x, 0, camera.position.z);
-    });
+    }, -1); // Priority -1: Run AFTER Progress Update (-2) but BEFORE Scene Render (0)
 
     return null;
 }

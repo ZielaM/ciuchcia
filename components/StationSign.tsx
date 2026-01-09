@@ -61,7 +61,7 @@ export function StationSign({ position, label, description, width = 4, subChapte
     const DESC_COLOR = "#3E2723"; // Dark Brown
 
     // Determine if we are in "Main Mode" (Enter button) or "Branch Mode" (Nav buttons)
-    const isBranchMode = !!onNext || !!onPrev;
+    const isBranchMode = onNext || onPrev;
 
     return (
         <group position={position} rotation={fixedRotation}>
@@ -116,7 +116,7 @@ export function StationSign({ position, label, description, width = 4, subChapte
                     portal={{ current: document.getElementById('ui-portal') as HTMLElement }}
                     transform
                     occlude
-                    position={[0, -(frameHeight / 2) + 1.0, 0.2]} // Relative to Center: Bottom is -H/2. Pushed up 1.0.
+                    position={[0, -(frameHeight / 2) - 1.2, 0.2]} // Moved Below Frame (-H/2 - Offset)
                     style={{
                         width: `${frameWidth * 42}px`,
                         display: 'flex',
@@ -135,7 +135,7 @@ export function StationSign({ position, label, description, width = 4, subChapte
                                     e.stopPropagation();
                                     if (onEnter) onEnter();
                                 }}
-                                className="px-6 py-2 bg-amber-600 text-amber-100 border-2 border-amber-900 hover:bg-amber-500 active:translate-y-1 transition-all uppercase text-2xl font-bold cursor-pointer shadow-md"
+                                className="px-6 py-2 bg-amber-400 text-amber-950 border-4 border-amber-950 shadow-[4px_4px_0px_#451a03] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#451a03] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all uppercase text-2xl font-bold font-pixel cursor-pointer"
                             >
                                 Czytaj Dalej ➡️
                             </button>
@@ -144,15 +144,17 @@ export function StationSign({ position, label, description, width = 4, subChapte
                         {/* BRANCH MODE: Navigation */}
                         {isBranchMode && (
                             <div className="flex gap-4">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (onPrev) onPrev();
-                                    }}
-                                    className="px-4 py-2 bg-amber-200 text-amber-900 border-2 border-amber-800 hover:bg-amber-100 active:translate-y-1 transition-all uppercase text-xl font-bold cursor-pointer"
-                                >
-                                    ⬅️ {currentSubIndex === 0 ? "Powrót" : "Cofnij"}
-                                </button>
+                                {!(currentSubIndex === 0 && onReturn) && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (onPrev) onPrev();
+                                        }}
+                                        className="px-4 py-2 bg-stone-200 text-stone-900 border-4 border-stone-800 shadow-[4px_4px_0px_#1c1917] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#1c1917] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all uppercase text-xl font-bold font-pixel cursor-pointer"
+                                    >
+                                        ⬅️ {currentSubIndex === 0 ? "Powrót" : "Cofnij"}
+                                    </button>
+                                )}
 
                                 <button
                                     onClick={(e) => {
@@ -160,9 +162,9 @@ export function StationSign({ position, label, description, width = 4, subChapte
                                         if (onNext) onNext();
                                         if (onReturn) onReturn();
                                     }}
-                                    className={`px-4 py-2 border-2 active:translate-y-1 transition-all uppercase text-xl font-bold cursor-pointer ${onReturn
-                                        ? "bg-red-600 text-red-100 border-red-900 hover:bg-red-500" // Red for Return
-                                        : "bg-amber-600 text-amber-100 border-amber-900 hover:bg-amber-500"
+                                    className={`px-4 py-2 border-4 active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all uppercase text-xl font-bold font-pixel cursor-pointer ${onReturn
+                                        ? "bg-red-500 text-white border-red-950 shadow-[4px_4px_0px_#450a0a] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#450a0a]"
+                                        : "bg-amber-400 text-amber-950 border-amber-950 shadow-[4px_4px_0px_#451a03] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#451a03]"
                                         }`}
                                 >
                                     {onReturn ? "Powrót ↩️" : "Dalej ➡️"}
