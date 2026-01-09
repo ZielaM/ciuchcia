@@ -136,11 +136,6 @@ export default function Home() {
             {/* Portal Target for 3D UI */}
             <div id="ui-portal" className="absolute top-0 left-0 w-full h-full pointer-events-none z-10 flex items-center justify-center" />
 
-            {/* Helper text */}
-            <div className="absolute bottom-5 right-5 pointer-events-none opacity-50 font-pixel text-stone-600 z-20">
-                SCROLL TO MOVE
-            </div>
-
             <Canvas camera={{ position: [0, 16, 0], fov: 50 }} shadows>
                 {/* DARKER SCENE + BRIGHT FRAMES (via Emissive) */}
                 <ambientLight intensity={0.2} color="#ffffff" />
