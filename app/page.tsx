@@ -5,7 +5,7 @@ import { VoxelMap } from "../components/VoxelMap";
 import { Train } from "../components/Train";
 import { TrackSystem } from "../components/TrackSystem";
 import * as THREE from "three";
-import { useRef, useMemo, useState, Suspense } from "react";
+import { useRef, useMemo, useState, Suspense, useEffect } from "react";
 import { FollowCamera } from "../components/FollowCamera";
 import { StationSign } from "../components/StationSign";
 import { ScrollControls, useScroll } from "@react-three/drei";
@@ -141,11 +141,11 @@ export default function Home() {
 }
 
 function SceneContent() {
-    const { trackX, signX, signWidth, trackLength, spacing } = useLayout();
+    const { trackX, signX, signWidth, trackLength, spacing, cameraY, vpHeight } = useLayout();
     const { viewport } = useThree();
 
-    // Dynamic Branch Spacing = Viewport Width + Margin
-    const branchSpacing = viewport.width + 2;
+    // Dynamic Branch Spacing = Sign Width + Gap (Compact)
+    const branchSpacing = signWidth * 2;
 
     // STATE
     const [activeTrack, setActiveTrack] = useState<'main' | number>('main');
@@ -365,6 +365,9 @@ function SceneContent() {
     const currentCurve = activeTrack === 'main' ? curve : branchCurves[activeTrack as number];
     const currentProgress = activeTrack === 'main' ? mainProgress : branchProgress;
 
+    // Inspection Scroll State (for Branches)
+    const viewOffset = useRef(0);
+    const isBranch = activeTrack !== 'main';
 
     return (
         <>
@@ -372,13 +375,59 @@ function SceneContent() {
             <directionalLight position={[10, 10, 5]} intensity={1} />
 
             {/* Scroll Control */}
+            {/* Scroll Control - ENABLED ONLY ON MAIN TRACK */}
             <ScrollControls
                 pages={STATION_DATA.length * 1.5}
-                damping={0.2} // Disabled inertia for crisp UI sync
+                damping={0}
                 enabled={activeTrack === 'main' && aligningTo === null}
             >
-                {aligningTo === null && <ScrollSyncer progress={mainProgress} stops={stops} />}
+                {/* Render Syncer ALWAYS if on main track, even during autopilot (to sync scrollbar) */}
+                {activeTrack === 'main' && (
+                    <ScrollSyncer
+                        progress={mainProgress}
+                        stops={stops}
+                        isAutopilot={aligningTo !== null}
+                    />
+                )}
             </ScrollControls>
+
+            {/* BRANCH SCROLL HANDLER */}
+            {isBranch && (
+                <BranchScrollHandler
+                    viewOffset={viewOffset}
+                    isBranch={isBranch}
+                    maxOffset={(() => {
+                        // Calculate Dynamic Limit based on Current Sign Description
+                        if (typeof activeTrack !== 'number') return 12.0;
+                        const subs = STATION_DATA[activeTrack]?.subChapters;
+                        if (!subs) return 12.0;
+                        const currentSub = subs[currentSubIndex];
+                        if (!currentSub) return 12.0;
+
+                        const desc = currentSub.desc || "";
+                        // Height Calc (Same as StationSign)
+                        // signWidth = ~14 (94% of layout). 
+                        // Let's assume signWidth approx 14 (safe bet) or check LayoutContext.
+                        // Actually LayoutContext provides signWidth. Using usage is cleaner but complicated here.
+                        // Let's us hardcoded safe approximate width 14.0.
+                        const frameWidth = 14.0;
+                        const charsPerLine = Math.floor((frameWidth - 1.0) * 6.5);
+                        const descLines = Math.ceil(desc.length / Math.max(1, charsPerLine));
+                        const calculatedHeight = 1.8 + (descLines * 0.42);
+
+                        // 3. Calculate Exact Max Offset needed to align Top of Screen with Top of Sign
+                        // Formula: Offset = (SignHeight) + Margin + (Gap - StartOffset) - (ScreenHalfHeight)
+                        // This aligns the Top of the Sign with the Top of the Viewport margin.
+                        const CAMERA_START_OFFSET = 6.0;
+                        const SIGN_TRACK_GAP = 5.0;
+                        const VIEW_MARGIN = 1.0;
+
+                        const neededOffset = calculatedHeight + VIEW_MARGIN + (SIGN_TRACK_GAP - CAMERA_START_OFFSET) - (vpHeight / 2);
+
+                        return Math.max(0, neededOffset);
+                    })()}
+                />
+            )}
 
             {/* Main Autopilot */}
             <AlignmentAutopilot
@@ -490,21 +539,94 @@ function SceneContent() {
                 curve={currentCurve}
                 progress={currentProgress}
                 isBranch={activeTrack !== 'main'}
+                baseY={cameraY}
+                offsetZ={viewOffset}
             />
         </>
     );
 }
 
 // --- SCROLL SYNC ---
-function ScrollSyncer({ progress, stops }: { progress: React.MutableRefObject<number>, stops: number[] }) {
+function ScrollSyncer({ progress, stops, isAutopilot }: { progress: React.MutableRefObject<number>, stops: number[], isAutopilot: boolean }) {
     const scroll = useScroll();
     const startT = stops[0];
     const endT = stops[stops.length - 1];
+    const range = endT - startT;
+
+
 
     useFrame(() => {
-        // Map scroll 0..1 to StartStation..EndStation range
-        progress.current = startT + scroll.offset * (endT - startT);
-    }, -2); // Priority -2: Run BEFORE Camera Update (-1) and Render (0)
+        if (isAutopilot) {
+            // AUTO: Progress -> Scroll
+            const currentOffset = (progress.current - startT) / range;
+            scroll.offset = currentOffset;
+            if (scroll.el) {
+                const targetScrollTop = currentOffset * (scroll.el.scrollHeight - scroll.el.clientHeight);
+                scroll.el.scrollTop = targetScrollTop;
+            }
+        } else {
+            // MANUAL: Scroll -> Progress
+            progress.current = startT + scroll.offset * range;
+        }
+    }, -2);
+
+    return null;
+}
+
+// --- BRANCH SCROLL HANDLER (WHEEL/TOUCH) ---
+function BranchScrollHandler({ viewOffset, isBranch, maxOffset }: { viewOffset: React.MutableRefObject<number>, isBranch: boolean, maxOffset: number }) {
+    const { gl } = useThree();
+
+    useEffect(() => {
+        if (!isBranch) {
+            viewOffset.current = 0;
+            return;
+        }
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            // Scroll Down (e.deltaY > 0) -> Move Camera Up (Increase Offset) -> See Higher parts of sign
+            // Sensitivity
+            const speed = 0.02;
+            viewOffset.current -= e.deltaY * speed;
+            viewOffset.current = Math.max(0, Math.min(viewOffset.current, maxOffset));
+        };
+
+        const handleTouchStartRaw = (e: TouchEvent) => {
+            // Prevent default to stop pull-to-refresh etc?
+            // e.preventDefault();
+        };
+
+        // For simple vertical drag:
+        let touchStartY = 0;
+        const handleTouchStart = (e: TouchEvent) => {
+            if (e.touches.length > 0) touchStartY = e.touches[0].clientY;
+        };
+
+        const handleTouchMove = (e: TouchEvent) => {
+            if (e.touches.length === 0) return;
+            // e.preventDefault(); // active listener
+            const y = e.touches[0].clientY;
+            const deltaY = touchStartY - y; // Drag Up = Positive
+            touchStartY = y;
+
+            const speed = 0.05;
+            viewOffset.current -= deltaY * speed;
+            viewOffset.current = Math.max(0, Math.min(viewOffset.current, maxOffset));
+        };
+
+        const target = window; // Use window to catch all events regardless of overlays
+
+        target.addEventListener('wheel', handleWheel, { passive: false });
+        target.addEventListener('touchstart', handleTouchStart, { passive: false }); // Passive false to block scroll
+        target.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+        return () => {
+            target.removeEventListener('wheel', handleWheel);
+            target.removeEventListener('touchstart', handleTouchStart);
+            target.removeEventListener('touchmove', handleTouchMove);
+        };
+    }, [isBranch, maxOffset, gl, viewOffset]);
 
     return null;
 }

@@ -38,7 +38,7 @@ export function StationSign({ position, label, description, width = 4, subChapte
 
     // 3. Final Frame Width
     const calculatedWidth = Math.max(labelWidth, descTargetWidth);
-    const frameWidth = Math.max(6, Math.min(width, calculatedWidth));
+    const frameWidth = width;
 
     // Heuristic for Height (Z-Length) [TUNED]
     // 1. Line Height: 0.42 units.
@@ -61,7 +61,7 @@ export function StationSign({ position, label, description, width = 4, subChapte
     const DESC_COLOR = "#3E2723"; // Dark Brown
 
     // Determine if we are in "Main Mode" (Enter button) or "Branch Mode" (Nav buttons)
-    const isBranchMode = onNext || onPrev;
+    const isBranchMode = !!(onNext || onPrev);
 
     return (
         <group position={position} rotation={fixedRotation}>
@@ -115,8 +115,10 @@ export function StationSign({ position, label, description, width = 4, subChapte
                 <Html
                     portal={{ current: document.getElementById('ui-portal') as HTMLElement }}
                     transform
-                    occlude
-                    position={[0, -(frameHeight / 2) - 1.2, 0.2]} // Moved Below Frame (-H/2 - Offset)
+                    // Removed occlude="blending" to prevent black artifact. 
+                    // If we want occlusion, plain 'occlude' is safer but might hide buttons. 
+                    // Let's try NO occlusion first to ensure visibility, as buttons are in front.
+                    position={[0, -(frameHeight / 2) - 1.2, 0.2]}
                     style={{
                         width: `${frameWidth * 42}px`,
                         display: 'flex',
@@ -124,6 +126,7 @@ export function StationSign({ position, label, description, width = 4, subChapte
                         fontFamily: 'var(--font-vt323)',
                         userSelect: 'none',
                         pointerEvents: 'none',
+                        background: 'transparent', // Explicit transparent
                     }}
                 >
                     {/* Pointer events auto on buttons only */}

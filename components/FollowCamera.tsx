@@ -8,9 +8,11 @@ interface FollowCameraProps {
     curve: THREE.Curve<THREE.Vector3>;
     progress: React.RefObject<number>;
     isBranch: boolean; // Added isBranch prop
+    baseY?: number;    // NEW: Base Camera Height (Zoom level)
+    offsetZ?: React.MutableRefObject<number>; // Optional Z-offset for inspection scrolling
 }
 
-export function FollowCamera({ curve, progress, isBranch }: FollowCameraProps) { // Destructured isBranch
+export function FollowCamera({ curve, progress, isBranch, baseY = 16, offsetZ }: FollowCameraProps) { // Destructured isBranch
     const { camera } = useThree();
 
     // Vertical Layout Camera defaults:
@@ -73,8 +75,13 @@ export function FollowCamera({ curve, progress, isBranch }: FollowCameraProps) {
         camera.position.x = targetCamX;
         camera.position.z = targetCamZ;
 
-        // 6. Y Axis: Fixed height
-        camera.position.y = 16;
+        // 6. Y Axis: Fixed height (Dynamic)
+        camera.position.y = baseY;
+
+        // 6.1 Inspection Offset
+        if (offsetZ) {
+            camera.position.z -= offsetZ.current;
+        }
 
         // 7. LookAt
         // Standard Top-Down Look
