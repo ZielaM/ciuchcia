@@ -40,20 +40,40 @@ export function StationSign({ position, label, description, width = 4, subChapte
     const calculatedWidth = Math.max(labelWidth, descTargetWidth);
     const frameWidth = width;
 
-    // Heuristic for Height (Z-Length) [TUNED]
-    // 1. Line Height: 0.42 units.
-    // 2. Chars/Line: (FrameWidth - Padding) * Density. 
-    // Increased density to 6.5 to slow down vertical growth.
-    const charsPerLine = Math.floor((frameWidth - 1.0) * 6.5);
-    const descLines = description ? Math.ceil(description.length / Math.max(1, charsPerLine)) : 0;
-
-    // Base: 1.8. Line: 0.42. Min: 4.0.
-    const calculatedHeight = 1.8 + (descLines * 0.42);
-    const frameHeight = Math.max(4.0, calculatedHeight);
-
     // 3D Text Configuration
     const PADDING = 0.5;
     const textBoxWidth = frameWidth - PADDING * 2;
+
+    // --- DYNAMIC CONTENT SIZING ---
+
+    // Title Metrics
+    const TITLE_SIZE = 0.8;
+    // Estimate chars per line for Title (Conservative factor ~2.2 for size 0.8)
+    const titleCharsPerLine = Math.floor(textBoxWidth * 2.2);
+    const titleLines = Math.ceil(label.length / Math.max(1, titleCharsPerLine));
+    const titleHeight = titleLines * TITLE_SIZE; // Approximate vertical space
+
+    // Description Metrics
+    // Factor 6.5 roughly matches existing tuning for size 0.35
+    const charsPerLine = Math.floor(textBoxWidth * 6.5);
+    const descLines = description ? Math.ceil(description.length / Math.max(1, charsPerLine)) : 0;
+    const descHeight = descLines * 0.42;
+
+    // Total Height Calculation
+    // TopMargin(1.0) + TitleHeight + Gap(0.5) + DescHeight + BottomMargin(1.0)
+    // Base was ~1.8 + desc. Now split explicit segments.
+    const verticalContent = 1.0 + titleHeight + 0.5 + descHeight + 1.0;
+
+    const calculatedHeight = Math.max(4.0, verticalContent);
+    const frameHeight = calculatedHeight;
+
+    // Layout Offsets (Relative to Center 0)
+    // Anchor is TOP.
+    // Top of Frame is at +frameHeight/2.
+    // Title starts at Top - Margin.
+    const titleY = (frameHeight / 2) - 1.0;
+    // Description starts at TitleY - TitleHeight - Gap.
+    const descY = titleY - titleHeight - 0.2; // 0.2 gap for tightness
 
     // Color Palette based on User's White BG preference:
     // BG is White (#FFFFFF). Text should be Black/Dark.
@@ -81,10 +101,10 @@ export function StationSign({ position, label, description, width = 4, subChapte
                 <group position={[0, 0.5, 0.15]}>
                     {/* TITLE */}
                     <Text
-                        position={[0, (frameHeight / 2) - 1.0, 0]}
+                        position={[0, titleY, 0]}
                         anchorY="top"
                         textAlign="center"
-                        fontSize={0.8}
+                        fontSize={TITLE_SIZE}
                         maxWidth={textBoxWidth}
                         color={TITLE_COLOR}
                         font="/fonts/vt323.ttf"
@@ -97,7 +117,7 @@ export function StationSign({ position, label, description, width = 4, subChapte
                     {/* DESCRIPTION */}
                     {description && (
                         <Text
-                            position={[0, (frameHeight / 2) - 2.0, 0]}
+                            position={[0, descY, 0]}
                             anchorY="top"
                             textAlign="center"
                             fontSize={0.35}

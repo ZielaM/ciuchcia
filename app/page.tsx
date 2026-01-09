@@ -77,7 +77,7 @@ const STATION_DATA: StationData[] = [
             { label: "Gwarancja pracy", desc: "Absolwent szkoły kształcącej w zawodzie technik transportu kolejowego powinien być przygotowany do wykonywania zadań zawodowych obejmujących organizowanie oraz prowadzenie ruchu pociągów na szlakach i posterunkach ruchu, a także obsługiwanie urządzeń sterowania ruchem kolejowym i łączności. Do jego kompetencji należy nadzorowanie i koordynowanie pracy przewoźników na terenie stacji kolejowej, planowanie i organizowanie pasażerskich i towarowych przewozów kolejowych oraz zarządzanie taborem. Ponadto absolwent jest przygotowany do zestawiania, rozrządzania i obsługi pociągów, jak również do realizacji zadań związanych z przygotowaniem do przewozu, odprawą oraz przewozem przesyłek, ładunków i osób." }
         ]
     },
-    { label: "Finał", desc: "Koleje dużych prędkości." },
+    { label: "Finał", desc: "Koleje dużych prędkości." }
 ];
 
 // CONSTANTS FOR GEOMETRY & TRACK
@@ -443,10 +443,20 @@ function SceneContent() {
                         // Let's assume signWidth approx 14 (safe bet) or check LayoutContext.
                         // Actually LayoutContext provides signWidth. Using usage is cleaner but complicated here.
                         // Let's us hardcoded safe approximate width 14.0.
+                        // Height Calc (Must Match StationSign Logic)
                         const frameWidth = 14.0;
+                        // Title Logic
+                        const titleCharsPerLine = Math.floor((frameWidth - 1.0) * 2.2);
+                        const titleLines = Math.ceil((currentSub.label || "").length / Math.max(1, titleCharsPerLine));
+                        const titleHeight = titleLines * 0.8;
+
+                        // Desc Logic
                         const charsPerLine = Math.floor((frameWidth - 1.0) * 6.5);
                         const descLines = Math.ceil(desc.length / Math.max(1, charsPerLine));
-                        const calculatedHeight = 1.8 + (descLines * 0.42);
+                        const descHeight = descLines * 0.42;
+
+                        // Total Height
+                        const calculatedHeight = 1.0 + titleHeight + 0.5 + descHeight + 1.0;
 
                         // 3. Calculate Exact Max Offset needed to align Top of Screen with Top of Sign
                         // Formula: Offset = (SignHeight) + Margin + (Gap - StartOffset) - (ScreenHalfHeight)
