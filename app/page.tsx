@@ -22,6 +22,15 @@ export interface StationData {
 const STATION_DATA: StationData[] = [
     { label: "Witaj w ZSK", desc: "Rozpoczynamy podróż po Twoją przyszłość w Zespole Szkół Komunikacji. Tutaj, blok po bloku, budujemy kompetencje jutra. Jesteśmy miejscem, gdzie łączy się ponad 75-letnia tradycja z najnowocześniejszymi technologiami: od kolejnictwa, przez automatykę, aż po zaawansowane IT. Przejedź się po naszych profilach, poznaj możliwości i wybierz kierunek, który nada pęd Twojej karierze." },
     {
+        "label": "Dlaczego ZSK?",
+        "desc": "Wybór szkoły średniej to decyzja na lata. Zobacz, dlaczego Zespół Szkół Komunikacji w Poznaniu to miejsce inne niż wszystkie. To nie tylko nauka, to gwarancja jakości potwierdzona twardymi danymi.",
+        "subChapters": [
+            { "label": "Szkoła z czołówki", "desc": "ZSK od lat niezmiennie utrzymuje się w ścisłej czołówce ogólnopolskiego rankingu „Perspektywy”. Wysoka zdawalność matur i egzaminów zawodowych sprawia, że dyplom naszej szkoły jest przepustką na najlepsze uczelnie techniczne." },
+            { "label": "Klasy dwujęzyczne", "desc": "Jako jedna z niewielu szkół technicznych oferujemy profile dwujęzyczne (informatyk i programista). Uczysz się przedmiotów zawodowych (np. bazy danych, systemy komputerowe) po angielsku. To ogromna przewaga na rynku IT, gdzie język angielski jest standardem komunikacji." },
+            { "label": "Idealna lokalizacja", "desc": "Szkoła mieści się przy ul. Fredry – w samym sercu Poznania. Masz stąd kilka minut spacerem na Dworzec Główny oraz doskonały dojazd tramwajami (w tym Pestką) z każdego zakątka miasta i okolic." }
+        ]
+    },
+    {
         label: "Technik szerokopasmowej komunikacji elektronicznej",
         desc: "Powszechny dostęp do szybkiego, szerokopasmowego Internetu we współczesnych gospodarkach na świecie staje się jedną z najważniejszych dziedzin, bez których nie może istnieć nowoczesne społeczeństwo. Obecnie kluczowy w tym kontekście staje się problem, w jaki sposób taki dostęp zapewnić. Technik szerokopasmowej komunikacji elektronicznej to zawód interdyscyplinarny łączący umiejętności kilku specjalności (elektronika, informatyka, telekomunikacja). Odnosi się do bezpośredniej wymiany informacji elektronicznej między ludźmi i urządzeniami przy wykorzystaniu łączności przewodowej, bezprzewodowej lub hybrydowej. W zakresie umiejętności technik będzie budował infrastrukturę zapewniającą przepustowość łączy o dużej prędkości pod: sztuczną inteligencję, telewizję wysokiej rozdzielczości (VOD), e-lerning, połączenia machine-to-machine (M2M) oraz video konferencjami biznesowymi.",
         subChapters: [
@@ -78,7 +87,7 @@ const STATION_DATA: StationData[] = [
             { label: "Gwarancja pracy", desc: "Absolwent szkoły kształcącej w zawodzie technik transportu kolejowego powinien być przygotowany do wykonywania zadań zawodowych obejmujących organizowanie oraz prowadzenie ruchu pociągów na szlakach i posterunkach ruchu, a także obsługiwanie urządzeń sterowania ruchem kolejowym i łączności. Do jego kompetencji należy nadzorowanie i koordynowanie pracy przewoźników na terenie stacji kolejowej, planowanie i organizowanie pasażerskich i towarowych przewozów kolejowych oraz zarządzanie taborem. Ponadto absolwent jest przygotowany do zestawiania, rozrządzania i obsługi pociągów, jak również do realizacji zadań związanych z przygotowaniem do przewozu, odprawą oraz przewozem przesyłek, ładunków i osób." }
         ]
     },
-    { label: "Finał", desc: "Koleje dużych prędkości." }
+    { label: "Do zobaczenia", desc: "Dojechałeś do stacji końcowej naszej prezentacji, ale dla Ciebie to dopiero początek trasy! Pamiętaj, że pociąg do kariery w ZSK odjeżdża punktualnie. Jeśli chcesz zdobyć zawód przyszłości, uczyć się w świetnej atmosferze i mieć pewność zatrudnienia lub solidną bazę na studia – nie zwlekaj. Złóż wniosek w rekrutacji i dołącz do naszego grona. Do zobaczenia we wrześniu przy ulicy Fredry!" }
 ];
 
 // CONSTANTS FOR GEOMETRY & TRACK
