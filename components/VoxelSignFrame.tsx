@@ -12,13 +12,11 @@ const WOOD_COLOR = "#8B5A2B"; // Classic Wood Brown
 const BG_COLOR = "#FFFFFF";
 
 export function VoxelSignFrame({ width, height }: VoxelSignFrameProps) {
-    // 4 Cuboids: Top, Bottom, Left, Right
-
-    // Horizontal Bars (Top & Bottom) run full width + thickness? 
-    // Let's make Top/Bottom span the full width including corners.
+    // Horizontal Bars (Top & Bottom)
+    // Span full width including corners.
     const hWidth = width + (FRAME_THICKNESS * 2);
 
-    // Vertical Bars (Left & Right) span height.
+    // Vertical Bars (Left & Right)
     const vHeight = height;
 
     return (

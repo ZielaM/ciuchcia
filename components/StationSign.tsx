@@ -22,58 +22,40 @@ export function StationSign({ position, label, description, width = 4, subChapte
     // X: -90 deg (flat)
     const fixedRotation = new THREE.Euler(-Math.PI / 2, 0, 0);
 
-    // Dynamic Sizing based on Text Content
+    // Content Metrics
+    const PADDING_X = width < 10 ? 1.5 : 3.0; // Responsive padding
     const CHAR_WIDTH = 0.5;
 
-    // #3 Responsive Margins: 
-    // If available width is small (< 10), use smaller padding (1.5). Else 3.0.
-    const PADDING_X = width < 10 ? 1.5 : 3.0;
-
-    // 1. Calculate desired width from Label
+    // Width Calculation
     const labelWidth = (label.length * CHAR_WIDTH) + PADDING_X;
-
-    // 2. Calculate desired width from Description
     const hasLongDesc = description && description.length > 30;
     const descTargetWidth = hasLongDesc ? width : 0;
 
-    // 3. Final Frame Width
+    // Final Frame Width
     const calculatedWidth = Math.max(labelWidth, descTargetWidth);
     const frameWidth = width;
 
-    // 3D Text Configuration
+    // Layout configuration
     const PADDING = 0.5;
     const textBoxWidth = frameWidth - PADDING * 2;
-
-    // --- DYNAMIC CONTENT SIZING ---
-
-    // Title Metrics
     const TITLE_SIZE = 0.8;
-    // Estimate chars per line for Title (Conservative factor ~2.2 for size 0.8)
+
+    // Height Calculation based on content
     const titleCharsPerLine = Math.floor(textBoxWidth * 2.2);
     const titleLines = Math.ceil(label.length / Math.max(1, titleCharsPerLine));
-    const titleHeight = titleLines * TITLE_SIZE; // Approximate vertical space
+    const titleHeight = titleLines * TITLE_SIZE;
 
-    // Description Metrics
-    // Factor 6.5 roughly matches existing tuning for size 0.35
     const charsPerLine = Math.floor(textBoxWidth * 6.5);
     const descLines = description ? Math.ceil(description.length / Math.max(1, charsPerLine)) : 0;
     const descHeight = descLines * 0.42;
 
-    // Total Height Calculation
-    // TopMargin(1.0) + TitleHeight + Gap(0.5) + DescHeight + BottomMargin(1.0)
-    // Base was ~1.8 + desc. Now split explicit segments.
+    // Total Height: Margins + Title + Gap + Desc + Margin
     const verticalContent = 1.0 + titleHeight + 0.5 + descHeight + 1.0;
+    const frameHeight = Math.max(4.0, verticalContent);
 
-    const calculatedHeight = Math.max(4.0, verticalContent);
-    const frameHeight = calculatedHeight;
-
-    // Layout Offsets (Relative to Center 0)
-    // Anchor is TOP.
-    // Top of Frame is at +frameHeight/2.
-    // Title starts at Top - Margin.
+    // Layout Offsets (Anchor Top)
     const titleY = (frameHeight / 2) - 1.0;
-    // Description starts at TitleY - TitleHeight - Gap.
-    const descY = titleY - titleHeight - 0.2; // 0.2 gap for tightness
+    const descY = titleY - titleHeight - 0.2;
 
     // Color Palette based on User's White BG preference:
     // BG is White (#FFFFFF). Text should be Black/Dark.

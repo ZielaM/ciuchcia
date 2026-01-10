@@ -10,11 +10,11 @@ export function VoxelMap({ maxBranchLength = 0 }: { maxBranchLength?: number }) 
         const tempPositions: [number, number, number][] = [];
         const tempColors: Float32Array[] = [];
 
-        // Z Range: From a bit before 0 to end of track + padding
+        // Z Range: From before start to end + padding
         const startZ = -30;
         const endZ = trackLength + 30;
 
-        // X Range: Covers the viewport width roughly
+        // X Range: Covers viewport width
         const startX = -30;
         const endX = 30;
 
@@ -27,18 +27,15 @@ export function VoxelMap({ maxBranchLength = 0 }: { maxBranchLength?: number }) 
             }
         }
 
-        // 2. Generate Branch Ground (Big Rectangle)
+        // 2. Generate Branch Ground (Extension Rectangle)
         if (maxBranchLength > 0) {
-            // Start from existing X end, go to maxBranchLength + padding
             const branchStartX = endX;
-            const branchEndX = endX + maxBranchLength + 20; // +20 buffer
+            const branchEndX = endX + maxBranchLength + 20;
 
-            // Cover all Z? Or just where branches are? 
-            // "Big Rectangle" strategy -> Cover everything Z to be safe and simple.
             for (let z = startZ; z < endZ; z++) {
                 for (let x = branchStartX; x < branchEndX; x++) {
                     tempPositions.push([x, 0, z]);
-                    // Slightly different shade for branch area?
+                    // Slightly varied shade for branch ground
                     const color = new THREE.Color().setHSL(0.32, 0.7, Math.random() * 0.2 + 0.3);
                     tempColors.push(Float32Array.from(color.toArray()));
                 }

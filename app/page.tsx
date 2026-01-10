@@ -1,18 +1,22 @@
+
 "use client";
 
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { VoxelMap } from "../components/VoxelMap";
 import { Train } from "../components/Train";
 import { TrackSystem } from "../components/TrackSystem";
 import * as THREE from "three";
-import { useRef, useMemo, useState, Suspense, useEffect } from "react";
+import { useRef, useMemo, useState, Suspense } from "react";
 import { FollowCamera } from "../components/FollowCamera";
 import { StationSign } from "../components/StationSign";
-import { ScrollControls, useScroll } from "@react-three/drei";
+import { ScrollControls } from "@react-three/drei";
 import { LayoutProvider, useLayout } from "../components/LayoutContext";
 import { BufferStop } from "../components/BufferStop";
+import { ScrollSyncer } from "../components/ScrollSyncer";
+import { BranchScrollHandler } from "../components/BranchScrollHandler";
+import { AlignmentAutopilot } from "../components/AlignmentAutopilot";
 
-// Define stops relative to station count
+// Note: STATION_DATA could be moved to a separate data file (e.g. data/stations.ts) in a real project
 export interface StationData {
     label: string;
     desc: string;
@@ -53,7 +57,7 @@ const STATION_DATA: StationData[] = [
         label: "Technik elektronik",
         desc: "Po ukończeniu tego kierunku absolwent będzie potrafił uruchamiać, nadzorować i obsługiwać sprzęt elektroniczny i komputerowy, a także diagnozować stan jego elementów, wykrywać usterki i przeprowadzać niezbędne konserwacje. Będzie posiadał umiejętność projektowania i montowania układów analogowych, cyfrowych, obwodów drukowanych oraz sieci komputerowych, jak również programowania w języku maszynowym procesora. W zakres jego kompetencji wejdzie czytanie schematów ideowych, blokowych i montażowych, posługiwanie się instrukcjami obsługi, dokumentacją serwisową oraz katalogami elementów i układów. Ponadto absolwent będzie przygotowany do mierzenia wielkości elektrycznych i nieelektrycznych wraz z interpretacją wyników, wykorzystywania oprogramowania narzędziowego i użytkowego niezbędnego w pracy, a także analizowania i interpretowania podstawowych zjawisk oraz praw z zakresu elektrotechniki, elektroniki i informatyki.",
         subChapters: [
-            { label: "Oferta edukacyjna", desc: "W ramach kształcenia językowego uczniowie kontynuują nauczanie obowiązkowego języka angielskiego oraz dodatkowego języka niemieckiego. Przydział do odpowiednich grup nastąpi na podstawie testów poziomujących z obu języków, które odbędą się dla wszystkich uczniów klas pierwszych podczas spotkań z wychowawcami. Przedmiotem realizowanym w zakresie rozszerzonym jest matematyka, natomiast do przedmiotów punktowanych należą język obcy nowożytny oraz fizyka. Tok nauczania prowadzi do zdobycia dwóch kwalifikacji zawodowych: ELM.02 (Montaż oraz instalowanie układów i urządzeń elektronicznych) oraz ELM.05 (Eksploatacja urządzeń elektronicznych)." },
+            { label: "Oferta edukacyjna", desc: "W ramach kształcenia językowego uczniowie kontynuują naukę obowiązkowego języka angielskiego oraz dodatkowego języka niemieckiego. Przydział do odpowiednich grup nastąpi na podstawie testów poziomujących z obu języków, które odbędą się dla wszystkich uczniów klas pierwszych podczas spotkań z wychowawcami. Przedmiotem realizowanym w zakresie rozszerzonym jest matematyka, natomiast do przedmiotów punktowanych należą język obcy nowożytny oraz fizyka. Tok nauczania prowadzi do zdobycia dwóch kwalifikacji zawodowych: ELM.02 (Montaż oraz instalowanie układów i urządzeń elektronicznych) oraz ELM.05 (Eksploatacja urządzeń elektronicznych)." },
             { label: "Cele kształcenia", desc: "Absolwent szkoły kształcącej w zawodzie technik elektronik powinien być przygotowany do wykonywania zadań zawodowych obejmujących instalowanie, konserwowanie, użytkowanie oraz naprawę urządzeń elektronicznych." },
             { label: "Gwarancja pracy", desc: "Według prognoz w ciągu najbliższych lat rynek pracy będzie potrzebował coraz więcej pracowników/specjalistów z branży elektronicznej. Analizując rynek pracy, dostrzegamy duże potrzeby kształcenia w zawodzie technik elektronik. Związane to jest ze stałym rozwojem technologicznym w branży elektronicznej i informatycznej oraz coraz większym zapotrzebowaniem w wielu branżach. Dostrzegamy potrzebę kształcenia w wyżej wymienionym zawodzie, wynikającą również z zainteresowania wielu pracodawców m.in.: z przemysłu precyzyjnego, zakładów produkcyjnych, kolejowych czy firm instalacyjnych skłonnych już dziś zatrudnić wysoko wykwalifikowanych pracowników posiadających wykształcenie techniczne w zawodzie elektronik." },
             { label: "Patronat", desc: "Kierunek objęty jest patronatem Miejskiego Przedsiębiorstwa Komunikacyjnego w Poznaniu" }
@@ -90,85 +94,35 @@ const STATION_DATA: StationData[] = [
     { label: "Do zobaczenia", desc: "Dojechałeś do stacji końcowej naszej prezentacji, ale dla Ciebie to dopiero początek trasy! Pamiętaj, że pociąg do kariery w ZSK odjeżdża punktualnie. Jeśli chcesz zdobyć zawód przyszłości, uczyć się w świetnej atmosferze i mieć pewność zatrudnienia lub solidną bazę na studia – nie zwlekaj. Złóż wniosek w rekrutacji i dołącz do naszego grona. Do zobaczenia we wrześniu przy ulicy Fredry!" }
 ];
 
-// CONSTANTS FOR GEOMETRY & TRACK
+// Configuration for geometry and track layout
 const TURN_RADIUS = 5;
 const TRANSITION = 3;
 const SIGN_TRACK_GAP = 5;
-const K = 0.55228475;
+const BEZIER_K = 0.55228475; // Approximation for quarter-circle
 const LEAD_IN = 9;
-const TRACK_START_Z = -10; // Unified Start Position
-
-function AlignmentAutopilot({
-    targetT,
-    progress,
-    curveLength,
-    onComplete,
-    speed = 25 // Default Fast align
-}: {
-    targetT: number | null,
-    progress: React.MutableRefObject<number>,
-    curveLength: number,
-    onComplete?: () => void,
-    speed?: number
-}) {
-    useFrame((state, delta) => {
-        if (targetT === null || curveLength === 0) return;
-
-        const diff = targetT - progress.current;
-
-        // Threshold to snap (approx 0.1 units on ground)
-        const tSnap = 0.1 / curveLength;
-
-        if (Math.abs(diff) < tSnap) {
-            progress.current = targetT;
-            if (onComplete) onComplete();
-            return;
-        }
-
-        const dir = Math.sign(diff);
-        // Convert ground speed to t speed
-        const tSpeed = speed / curveLength;
-        const move = dir * tSpeed * delta;
-
-        // Don't overshoot
-        if (Math.abs(move) > Math.abs(diff)) {
-            progress.current = targetT;
-        } else {
-            progress.current += move;
-        }
-    });
-    return null;
-}
+const TRACK_START_Z = -10;
 
 export default function Home() {
     return (
         <main className="relative w-screen h-screen overflow-hidden bg-stone-100">
-            {/* Portal Target for 3D UI */}
+            {/* UI Portal Target */}
             <div id="ui-portal" className="absolute top-0 left-0 w-full h-full pointer-events-none z-10 flex items-center justify-center" />
 
             <Canvas camera={{ position: [0, 16, 0], fov: 50 }} shadows>
-                {/* DARKER SCENE + BRIGHT FRAMES (via Emissive) */}
-                <ambientLight intensity={0.2} color="#ffffff" />
-
-                {/* Main Sun: Darker to create mood */}
+                <ambientLight intensity={0.7} color="#ffffff" />
                 <directionalLight
                     position={[15, 20, 10]}
-                    intensity={0.6}
+                    intensity={0.7}
                     castShadow
                     shadow-mapSize={[2048, 2048]}
                     shadow-bias={-0.0001}
                     color="#fffaf0"
                 />
-
-                {/* Fill Light: Barely visible */}
-                <directionalLight
-                    position={[-15, 10, -10]}
-                    intensity={0.1}
-                    color="#e0f0ff"
-                />
+                <directionalLight position={[-15, 10, -10]} intensity={0.1} color="#e0f0ff" />
+                {/* Additional fill light restored */}
+                <directionalLight position={[10, 10, 5]} intensity={0.5} />
 
                 <Suspense fallback={null}>
-                    {/* Environment removed to prevent overexposure */}
                     <LayoutProvider stations={STATION_DATA}>
                         <SceneContent />
                     </LayoutProvider>
@@ -182,27 +136,24 @@ function SceneContent() {
     const { trackX, signX, signWidth, trackLength, spacing, cameraY, vpHeight, isMobile } = useLayout();
     const { viewport } = useThree();
 
-    // Dynamic Branch Spacing = Sign Width + Gap (Compact)
+    // Spacing between branch sub-chapter signs
     const branchSpacing = signWidth * 2;
 
-    // STATE
+    // --- State Management ---
     const [activeTrack, setActiveTrack] = useState<'main' | number>('main');
     const [aligningTo, setAligningTo] = useState<number | null>(null);
-
-    // Branch State
     const [currentSubIndex, setCurrentSubIndex] = useState(0);
     const [isReturning, setIsReturning] = useState(false);
-
-    // Distinguish between "Aligning to Enter" and "Aligning to Park"
     const [pendingEntry, setPendingEntry] = useState<number | null>(null);
 
-    // REFS for progress
+    // Progress Refs
     const mainProgress = useRef(0);
     const branchProgress = useRef(0);
+    const viewOffset = useRef(0); // For branch sign scrolling
 
-    // --- DYNAMIC TRACK GENERATION ---
+    const isBranch = activeTrack !== 'main';
 
-    // Generate Curve: Vertical Line at x = trackX
+    // --- curve Generation ---
     const curve = useMemo(() => {
         const points = [
             new THREE.Vector3(trackX, 0.6, TRACK_START_Z),
@@ -213,23 +164,16 @@ function SceneContent() {
 
     const mainCurveLength = useMemo(() => curve.getLength(), [curve]);
 
-    // Calculate STOPS (0..1) based on physical distance
     const stops = useMemo(() => {
         const arr = [];
         const realCurveLength = mainCurveLength;
-
         for (let i = 0; i < STATION_DATA.length; i++) {
             const zPos = i * spacing;
-            const startZ = TRACK_START_Z;
-            // t = distance from start / total length
-            const t = Math.max(0, Math.min(1, (zPos - startZ) / realCurveLength));
+            const t = Math.max(0, Math.min(1, (zPos - TRACK_START_Z) / realCurveLength));
             arr.push(t);
         }
         return arr;
     }, [curve, spacing, mainCurveLength]);
-
-
-    // --- BRANCH TRACKS GENERATION ---
 
     const branchCurves = useMemo(() => {
         const curves: { [key: number]: THREE.Curve<THREE.Vector3> } = {};
@@ -237,47 +181,32 @@ function SceneContent() {
         STATION_DATA.forEach((station, index) => {
             if (station.subChapters && station.subChapters.length > 0) {
                 const startX = trackX;
-
-                // --- GEOMETRY FIRST LOGIC ---
-                // 1. Target Z for the Straight Section
-                // We want the Straight Track to be exactly `SIGN_TRACK_GAP` below the Main Sign.
-                // Main Sign Z = index * spacing.
                 const mainSignZ = index * spacing;
                 const targetStraightZ = mainSignZ + SIGN_TRACK_GAP;
-
-                // 2. Reverse Engineer StartZ
-                // Geometry: Start -> LeadIn -> Transition(+3) -> Turn(+5) -> Straight.
-                // So StraightZ = StartZ + TRANSITION + TURN_RADIUS.
-                // StartZ = StraightZ - TRANSITION - TURN_RADIUS.
                 const startZ = targetStraightZ - TRANSITION - TURN_RADIUS;
-
                 const totalXDist = (station.subChapters.length) * branchSpacing;
                 const branchLength = totalXDist + 10;
 
                 const path = new THREE.CurvePath<THREE.Vector3>();
 
-                // 1. LEAD-IN STRAIGHT
-                const p1 = new THREE.Vector3(startX, 0.6, startZ - LEAD_IN);
-                const p2 = new THREE.Vector3(startX, 0.6, startZ);
-                path.add(new THREE.LineCurve3(p1, p2));
+                // Segment 1: Lead-in
+                path.add(new THREE.LineCurve3(
+                    new THREE.Vector3(startX, 0.6, startZ - LEAD_IN),
+                    new THREE.Vector3(startX, 0.6, startZ)
+                ));
 
-                // 2. TRANSITION STRAIGHT 
+                // Segment 2: Transition
+                const p2 = new THREE.Vector3(startX, 0.6, startZ);
                 const p2_end = new THREE.Vector3(startX, 0.6, startZ + TRANSITION);
                 path.add(new THREE.LineCurve3(p2, p2_end));
 
-                // 3. TURN 
-                const c1 = new THREE.Vector3(startX, 0.6, startZ + TRANSITION + (TURN_RADIUS * K));
+                // Segment 3: Turn (Cubic Bezier)
+                const c1 = new THREE.Vector3(startX, 0.6, startZ + TRANSITION + (TURN_RADIUS * BEZIER_K));
                 const p3 = new THREE.Vector3(startX + TURN_RADIUS, 0.6, startZ + TRANSITION + TURN_RADIUS);
-                // Note: p3.z SHOULD be `targetStraightZ`.
-
-                const c2 = new THREE.Vector3(
-                    (startX + TURN_RADIUS) - (TURN_RADIUS * K),
-                    0.6,
-                    startZ + TRANSITION + TURN_RADIUS
-                );
+                const c2 = new THREE.Vector3(p3.x - (TURN_RADIUS * BEZIER_K), 0.6, p3.z);
                 path.add(new THREE.CubicBezierCurve3(p2_end, c1, c2, p3));
 
-                // 4. EXTENSION STRAIGHT
+                // Segment 4: Extension
                 const p4 = new THREE.Vector3(p3.x + branchLength, 0.6, p3.z);
                 path.add(new THREE.LineCurve3(p3, p4));
 
@@ -287,18 +216,7 @@ function SceneContent() {
         return curves;
     }, [trackX, spacing, branchSpacing]);
 
-
-    // 1. Calculate Max Branch Length for VoxelMap
-    const maxBranchLength = useMemo(() => {
-        let maxLen = 0;
-        Object.keys(branchCurves).forEach(key => {
-            const c = branchCurves[parseInt(key)];
-            if (c) maxLen = Math.max(maxLen, c.getLength());
-        });
-        return maxLen;
-    }, [branchCurves]);
-
-    // Determine active branch length dynamically
+    // Active track helpers
     const activeBranchLength = useMemo(() => {
         if (typeof activeTrack === 'number') {
             return branchCurves[activeTrack]?.getLength() || 1;
@@ -306,41 +224,33 @@ function SceneContent() {
         return 1;
     }, [activeTrack, branchCurves]);
 
-    // --- SWITCHING & NAVIGATION LOGIC ---
+    const maxBranchLength = useMemo(() => {
+        let maxLen = 0;
+        Object.values(branchCurves).forEach(c => maxLen = Math.max(maxLen, c.getLength()));
+        return maxLen;
+    }, [branchCurves]);
 
+    // --- Navigation Logic ---
     const handleEnterBranch = (index: number) => {
         setAligningTo(index);
         setPendingEntry(index);
         setIsReturning(false);
     };
 
-    const handleReturnToMain = () => {
-        setIsReturning(true);
-    };
+    const handleReturnToMain = () => setIsReturning(true);
 
     const finalizeReturnToMain = () => {
         setIsReturning(false);
         if (typeof activeTrack === 'number') {
             const returnedFromIndex = activeTrack;
-
-            // 1. Calculate precise re-entry point (Switch Z)
             const mainSignZ = returnedFromIndex * spacing;
             const targetStraightZ = mainSignZ + SIGN_TRACK_GAP;
             const startZ = targetStraightZ - TRANSITION - TURN_RADIUS;
+            const tSwitch = (startZ - TRACK_START_Z) / mainCurveLength;
 
-            // 2. Map startZ to main t
-            // t = (Z - startZ_World) / Length
-            const p1z = TRACK_START_Z;
-            const tSwitch = (startZ - p1z) / mainCurveLength;
-
-            // 3. Set Position to Switch
             mainProgress.current = tSwitch;
-
-            // 4. Switch Context to Main
             setActiveTrack('main');
             setCurrentSubIndex(0);
-
-            // 5. Trigger Autopilot to Drive to Station ("Park")
             setPendingEntry(null);
             setAligningTo(returnedFromIndex);
         }
@@ -368,9 +278,7 @@ function SceneContent() {
         if (!targetCurve) return;
 
         const totalLength = targetCurve.getLength();
-
-        const leadInLength = 9;
-        const startT = leadInLength / totalLength;
+        const startT = LEAD_IN / totalLength;
         branchProgress.current = startT;
 
         setActiveTrack(index);
@@ -378,48 +286,53 @@ function SceneContent() {
         setCurrentSubIndex(0);
     };
 
-    // --- BRANCH TARGET CALCULATION ---
     const branchTargetT = useMemo(() => {
         if (typeof activeTrack !== 'number') return null;
         if (isReturning) {
-            const totalLength = activeBranchLength;
-            const leadInLength = 9;
-            return leadInLength / totalLength;
+            return LEAD_IN / activeBranchLength;
         }
-
         const setupConfig = LEAD_IN + TRANSITION + (Math.PI * TURN_RADIUS / 2);
-
-        // Target = LeadIn + Transition + Turn + (i+1)*Spacing.
-        // Sign X Position should match the Train X.
-        // Train X on Straight = TrackX + TURN_RADIUS + LinearDistance.
-        // Sign X = TrackX + 5 + (i+1)*BranchSpacing.
         const dist = setupConfig + ((currentSubIndex + 1) * branchSpacing) + 3.05;
-
         return Math.min(1, dist / activeBranchLength);
-
     }, [activeTrack, currentSubIndex, activeBranchLength, branchSpacing, isReturning]);
-
 
     const currentCurve = activeTrack === 'main' ? curve : branchCurves[activeTrack as number];
     const currentProgress = activeTrack === 'main' ? mainProgress : branchProgress;
 
-    // Inspection Scroll State (for Branches)
-    const viewOffset = useRef(0);
-    const isBranch = activeTrack !== 'main';
+    // --- View Max Offset Calculation ---
+    // Calculates how far we can scroll down on a branch sign
+    const branchMaxOffset = useMemo(() => {
+        if (typeof activeTrack !== 'number') return 12.0;
+        const subs = STATION_DATA[activeTrack]?.subChapters;
+        if (!subs) return 12.0;
+        const currentSub = subs[currentSubIndex];
+        if (!currentSub) return 12.0;
+
+        const desc = currentSub.desc || "";
+        const frameWidth = 14.0; // Approximation
+        const titleCharsPerLine = Math.floor((frameWidth - 1.0) * 2.2);
+        const titleLines = Math.ceil((currentSub.label || "").length / Math.max(1, titleCharsPerLine));
+        const titleHeight = titleLines * 0.8;
+
+        const charsPerLine = Math.floor((frameWidth - 1.0) * 6.5);
+        const descLines = Math.ceil(desc.length / Math.max(1, charsPerLine));
+        const descHeight = descLines * 0.42;
+
+        const calculatedHeight = 1.0 + titleHeight + 0.5 + descHeight + 1.0;
+        const VIEW_MARGIN = -3.0; // Adjustable
+        const TRAIN_BOTTOM_MARGIN = 2.0;
+
+        return calculatedHeight + VIEW_MARGIN + SIGN_TRACK_GAP + TRAIN_BOTTOM_MARGIN - (isMobile ? 0 : vpHeight);
+    }, [activeTrack, currentSubIndex, isMobile, vpHeight]);
 
     return (
         <>
-            <ambientLight intensity={0.5} />
-            <directionalLight position={[10, 10, 5]} intensity={1} />
-
-            {/* Scroll Control */}
-            {/* Scroll Control - ENABLED ONLY ON MAIN TRACK */}
+            {/* --- Scroll Controls & Handlers --- */}
             <ScrollControls
                 pages={STATION_DATA.length * 1.5}
                 damping={0}
                 enabled={activeTrack === 'main' && aligningTo === null}
             >
-                {/* Render Syncer ALWAYS if on main track, even during autopilot (to sync scrollbar) */}
                 {activeTrack === 'main' && (
                     <ScrollSyncer
                         progress={mainProgress}
@@ -429,67 +342,15 @@ function SceneContent() {
                 )}
             </ScrollControls>
 
-            {/* BRANCH SCROLL HANDLER */}
             {isBranch && (
                 <BranchScrollHandler
                     viewOffset={viewOffset}
                     isBranch={isBranch}
-                    maxOffset={(() => {
-                        // Calculate Dynamic Limit based on Current Sign Description
-                        if (typeof activeTrack !== 'number') return 12.0;
-                        const subs = STATION_DATA[activeTrack]?.subChapters;
-                        if (!subs) return 12.0;
-                        const currentSub = subs[currentSubIndex];
-                        if (!currentSub) return 12.0;
-
-                        const desc = currentSub.desc || "";
-                        // Height Calc (Same as StationSign)
-                        // signWidth = ~14 (94% of layout). 
-                        // Let's assume signWidth approx 14 (safe bet) or check LayoutContext.
-                        // Actually LayoutContext provides signWidth. Using usage is cleaner but complicated here.
-                        // Let's us hardcoded safe approximate width 14.0.
-                        // Height Calc (Must Match StationSign Logic)
-                        const frameWidth = 14.0;
-                        // Title Logic
-                        const titleCharsPerLine = Math.floor((frameWidth - 1.0) * 2.2);
-                        const titleLines = Math.ceil((currentSub.label || "").length / Math.max(1, titleCharsPerLine));
-                        const titleHeight = titleLines * 0.8;
-
-                        // Desc Logic
-                        const charsPerLine = Math.floor((frameWidth - 1.0) * 6.5);
-                        const descLines = Math.ceil(desc.length / Math.max(1, charsPerLine));
-                        const descHeight = descLines * 0.42;
-
-                        // Total Height
-                        const calculatedHeight = 1.0 + titleHeight + 0.5 + descHeight + 1.0;
-
-                        // 3. Calculate Exact Max Offset needed to align Top of Screen with Top of Sign
-                        // Formula: Offset = (SignHeight) + Margin + (Gap - StartOffset) - (ScreenHalfHeight)
-                        // StartOffset is now dynamic: (vpHeight/2) - 2.0.
-                        // So: Height + Margin + Gap - (vpHeight/2 - 2.0) - (vpHeight/2).
-                        //   = Height + Margin + Gap - vpHeight/2 + 2.0 - vpHeight/2.
-                        //   = Height + Margin + Gap + 2.0 - vpHeight.
-
-                        const SIGN_TRACK_GAP = 5.0;
-                        const VIEW_MARGIN = -3.0; // User Set
-                        const TRAIN_BOTTOM_MARGIN = 2.0;
-
-                        // Dynamic Start Offset logic from FollowCamera:
-                        // CameraZ = TrainZ - (vpHeight/2 - 2.0).
-                        // StartOffset = (vpHeight/2) - 2.0.
-
-                        // needed = Height + Margin + Gap - StartOffset - vpHeight/2.
-                        //        = Height + Margin + Gap - (vpHeight/2 - 2.0) - vpHeight/2
-                        //        = Height + Margin + Gap + 2.0 - vpHeight.
-
-                        const neededOffset = calculatedHeight + VIEW_MARGIN + SIGN_TRACK_GAP + TRAIN_BOTTOM_MARGIN - (isMobile ? 0 : vpHeight);
-
-                        return neededOffset; // Allow Negative
-                    })()}
+                    maxOffset={branchMaxOffset}
                 />
             )}
 
-            {/* Main Autopilot */}
+            {/* --- Autopilots --- */}
             <AlignmentAutopilot
                 targetT={aligningTo !== null ? stops[aligningTo] : null}
                 progress={mainProgress}
@@ -500,14 +361,12 @@ function SceneContent() {
                         if (pendingEntry === aligningTo) {
                             performSwitch(aligningTo);
                         } else {
-                            // Just Parking
                             setAligningTo(null);
                         }
                     }
                 }}
             />
 
-            {/* Branch Autopilot */}
             {activeTrack !== 'main' && (
                 <AlignmentAutopilot
                     targetT={branchTargetT}
@@ -520,19 +379,13 @@ function SceneContent() {
                 />
             )}
 
+            {/* --- Environment --- */}
             <VoxelMap maxBranchLength={maxBranchLength} />
 
-            {/* --- MAIN SIGNS GENERATION --- */}
-            {/* We use explicit Z logic now to match Geometry-First principle */}
+            {/* --- Signs --- */}
             {stops.map((t, i) => {
-                // 1. Calculate ideal Geometric Z for Main Sign.
-                // Based on Grid: index * spacing
                 const mainSignZ = i * spacing;
-
-                // We ignore 't' for Z position to ensure grid alignment, 
-                // though t-based calc should yield the same result.
                 const signPos = new THREE.Vector3(signX, 0.6, mainSignZ);
-
                 const isActiveBranch = activeTrack === i;
 
                 return (
@@ -548,24 +401,11 @@ function SceneContent() {
                 );
             })}
 
-            {/* --- BRANCH SIGNS GENERATION --- */}
             {activeTrack !== 'main' && STATION_DATA[activeTrack as number]?.subChapters?.map((sub, i, arr) => {
                 const startX = trackX;
-
-                // GEOMETRY-FIRST ALIGNMENT:
-                // Main Sign Z is at `index * spacing`.
-                // Branch Track Straight Part is at `index * spacing + SIGN_TRACK_GAP`.
-                // Sub-Chapter Signs should maintain the SAME offset from the track.
-                // SubSign Z = Track Z - SIGN_TRACK_GAP.
-                // Therefore: SubSign Z = (MainSignZ + GAP) - GAP = MainSignZ.
-
                 const mainStationZ = (activeTrack as number) * spacing;
-                const subSignZ = mainStationZ; // Identical Z to Main Signs
-
-                // XPos: TrackX + Radius(5) + Spacing*(i+1)
                 const sX = startX + 5 + ((i + 1) * branchSpacing);
-                const pos = new THREE.Vector3(sX, 0.6, subSignZ);
-
+                const pos = new THREE.Vector3(sX, 0.6, mainStationZ);
                 const isCurrent = i === currentSubIndex;
                 const isLast = i === arr.length - 1;
 
@@ -584,49 +424,34 @@ function SceneContent() {
                 )
             })}
 
-
+            {/* --- Tracks & Trains --- */}
             <Train curve={currentCurve} position={new THREE.Vector3(0, 0.8, 0)} progress={currentProgress} />
-
-            {/* Main Track */}
             <TrackSystem curve={curve} />
-
-            {/* Branch Tracks */}
             {Object.values(branchCurves).map((branchCurve, i) => (
                 <TrackSystem key={i} curve={branchCurve} debug={false} renderSkip={LEAD_IN + 3} />
             ))}
 
-            {/* --- BUFFER STOPS --- */}
-
-            {/* 1. Main Track Start (Facing +Z, towards train) */}
+            {/* --- Buffer Stops --- */}
+            {/* Main Start */}
             <BufferStop
                 position={new THREE.Vector3(trackX, 0.6, TRACK_START_Z)}
                 rotation={new THREE.Euler(0, 0, 0)}
             />
-
-            {/* 2. Main Track End (Facing -Z, towards incoming train) */}
-            {/* Main curve end point defined in curve useMemo: trackLength + 10 */}
+            {/* Main End */}
             <BufferStop
                 position={new THREE.Vector3(trackX, 0.6, trackLength + 10)}
                 rotation={new THREE.Euler(0, Math.PI, 0)}
             />
-
-            {/* 3. Branch Ends */}
+            {/* Branch Ends */}
             {Object.entries(branchCurves).map(([key, bCurve]) => {
                 const endPoint = bCurve.getPoint(1);
-                // Calculate Rotation: Face AGAINST the tangent
-                // Tangent at end (t=1)
                 const tangent = bCurve.getTangent(1);
-                // Angle of tangent
                 const angle = Math.atan2(tangent.x, tangent.z);
-                // We want Local Z (Red Lights) to face -Tangent.
-                // -Tangent angle = angle + PI.
-                const rotY = angle + Math.PI;
-
                 return (
                     <BufferStop
                         key={`buffer-branch-${key}`}
                         position={endPoint}
-                        rotation={new THREE.Euler(0, rotY, 0)}
+                        rotation={new THREE.Euler(0, angle + Math.PI, 0)}
                     />
                 );
             })}
@@ -640,89 +465,4 @@ function SceneContent() {
             />
         </>
     );
-}
-
-// --- SCROLL SYNC ---
-function ScrollSyncer({ progress, stops, isAutopilot }: { progress: React.MutableRefObject<number>, stops: number[], isAutopilot: boolean }) {
-    const scroll = useScroll();
-    const startT = stops[0];
-    const endT = stops[stops.length - 1];
-    const range = endT - startT;
-
-
-
-    useFrame(() => {
-        if (isAutopilot) {
-            // AUTO: Progress -> Scroll
-            const currentOffset = (progress.current - startT) / range;
-            scroll.offset = currentOffset;
-            if (scroll.el) {
-                const targetScrollTop = currentOffset * (scroll.el.scrollHeight - scroll.el.clientHeight);
-                scroll.el.scrollTop = targetScrollTop;
-            }
-        } else {
-            // MANUAL: Scroll -> Progress
-            progress.current = startT + scroll.offset * range;
-        }
-    }, -2);
-
-    return null;
-}
-
-// --- BRANCH SCROLL HANDLER (WHEEL/TOUCH) ---
-function BranchScrollHandler({ viewOffset, isBranch, maxOffset }: { viewOffset: React.MutableRefObject<number>, isBranch: boolean, maxOffset: number }) {
-    const { gl } = useThree();
-
-    useEffect(() => {
-        if (!isBranch) {
-            viewOffset.current = 0;
-            return;
-        }
-
-        const handleWheel = (e: WheelEvent) => {
-            e.preventDefault();
-            // Scroll Down (e.deltaY > 0) -> Move Camera Up (Increase Offset) -> See Higher parts of sign
-            // Sensitivity
-            const speed = 0.02;
-            viewOffset.current -= e.deltaY * speed;
-            viewOffset.current = Math.max(0, Math.min(viewOffset.current, maxOffset));
-        };
-
-        const handleTouchStartRaw = (e: TouchEvent) => {
-            // Prevent default to stop pull-to-refresh etc?
-            // e.preventDefault();
-        };
-
-        // For simple vertical drag:
-        let touchStartY = 0;
-        const handleTouchStart = (e: TouchEvent) => {
-            if (e.touches.length > 0) touchStartY = e.touches[0].clientY;
-        };
-
-        const handleTouchMove = (e: TouchEvent) => {
-            if (e.touches.length === 0) return;
-            // e.preventDefault(); // active listener
-            const y = e.touches[0].clientY;
-            const deltaY = touchStartY - y; // Drag Up = Positive
-            touchStartY = y;
-
-            const speed = 0.05;
-            viewOffset.current -= deltaY * speed;
-            viewOffset.current = Math.max(0, Math.min(viewOffset.current, maxOffset));
-        };
-
-        const target = window; // Use window to catch all events regardless of overlays
-
-        target.addEventListener('wheel', handleWheel, { passive: false });
-        target.addEventListener('touchstart', handleTouchStart, { passive: false }); // Passive false to block scroll
-        target.addEventListener('touchmove', handleTouchMove, { passive: false });
-
-        return () => {
-            target.removeEventListener('wheel', handleWheel);
-            target.removeEventListener('touchstart', handleTouchStart);
-            target.removeEventListener('touchmove', handleTouchMove);
-        };
-    }, [isBranch, maxOffset, gl, viewOffset]);
-
-    return null;
 }

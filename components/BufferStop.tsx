@@ -17,7 +17,7 @@ export function BufferStop({ position, rotation }: { position: THREE.Vector3, ro
         <group position={position} rotation={rotation}>
             <group position={[0, 0, 0]}>
 
-                {/* 1. Vertical Posts (Left & Right) - On Rails */}
+                {/* Vertical Posts */}
                 <mesh position={[-0.35, 0.5, 0]}>
                     <boxGeometry args={[0.3, 1.0, 0.3]} />
                     <meshStandardMaterial color={woodColor} />
@@ -27,13 +27,13 @@ export function BufferStop({ position, rotation }: { position: THREE.Vector3, ro
                     <meshStandardMaterial color={woodColor} />
                 </mesh>
 
-                {/* 2. Main Horizontal Bumper Beam */}
+                {/* Main Horizontal Bumper Beam */}
                 <mesh position={[0, 0.8, 0.2]}>
                     <boxGeometry args={[1.4, 0.5, 0.3]} />
                     <meshStandardMaterial color={bumperColor} />
                 </mesh>
 
-                {/* 3. Red Warning Lights/Paint on Bumper */}
+                {/* Warning Lights */}
                 <mesh position={[-0.4, 0.8, 0.36]}>
                     <planeGeometry args={[0.25, 0.25]} />
                     <meshStandardMaterial color={redSignal} emissive={redSignal} emissiveIntensity={0.5} />
@@ -43,7 +43,7 @@ export function BufferStop({ position, rotation }: { position: THREE.Vector3, ro
                     <meshStandardMaterial color={redSignal} emissive={redSignal} emissiveIntensity={0.5} />
                 </mesh>
 
-                {/* 4. Diagonal Supports (Backwards) */}
+                {/* Diagonal Supports */}
                 <group position={[0, 0, -0.4]}>
                     <mesh position={[-0.35, 0.4, 0]} rotation={[Math.PI / 4, 0, 0]}>
                         <boxGeometry args={[0.2, 1.1, 0.2]} />

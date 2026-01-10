@@ -25,31 +25,23 @@ const LayoutContext = createContext<LayoutMetrics | null>(null);
 export function LayoutProvider({ children, stations }: { children: ReactNode, stations: StationInfo[] }) {
     const { size } = useThree();
 
-    // 0. Mobile Detection (Stable based on pixels)
+    // 0. Mobile Detection
     const isMobile = size.width < 768 || (size.width / size.height) < 1.0;
 
     // 0.1 Camera Config
     const cameraY = isMobile ? 26 : 16;
     const FOV = 50;
 
-    // 0.2 MANUAL Viewport Calculation (To avoid lag/dependency cycle with physical camera)
-    // Visible Height = 2 * tan(fov/2) * distance
-    const dist = cameraY; // Camera is at 0,Y,0 looking at 0,0,0
+    // 0.2 Viewport Calculation
+    const dist = cameraY;
     const vFOV = (FOV * Math.PI) / 180;
     const vpHeight = 2 * Math.tan(vFOV / 2) * dist;
     const vpWidth = vpHeight * (size.width / size.height);
 
-    console.log("Calculated VP:", { vpWidth, vpHeight, isMobile, cameraY });
-    console.log("vpWidth", vpWidth);
-    console.log("vpHeight", vpHeight);
-
     // 1. "Track on Left" Logic
     const leftEdge = -vpWidth / 2;
-    console.log("leftEdge", leftEdge);
     const trackMargin = isMobile ? 1 : 3;
-    console.log("trackMargin", trackMargin);
     const trackX = leftEdge + trackMargin;
-    console.log("trackX", trackX);
 
     // 2. Calculate Available Width for Signs (Moved UP to be reusable)
     const CAMERA_HEIGHT = cameraY;
