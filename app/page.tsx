@@ -145,6 +145,7 @@ function SceneContent() {
     const [currentSubIndex, setCurrentSubIndex] = useState(0);
     const [isReturning, setIsReturning] = useState(false);
     const [pendingEntry, setPendingEntry] = useState<number | null>(null);
+    const [syncScroll, setSyncScroll] = useState(false);
 
     // Progress Refs
     const mainProgress = useRef(0);
@@ -252,7 +253,9 @@ function SceneContent() {
             setActiveTrack('main');
             setCurrentSubIndex(0);
             setPendingEntry(null);
-            setAligningTo(returnedFromIndex);
+            // setAligningTo(returnedFromIndex); 
+
+            setSyncScroll(true);
         }
     };
 
@@ -338,6 +341,8 @@ function SceneContent() {
                         progress={mainProgress}
                         stops={stops}
                         isAutopilot={aligningTo !== null}
+                        forceSync={syncScroll}
+                        onSyncComplete={() => setSyncScroll(false)}
                     />
                 )}
             </ScrollControls>
