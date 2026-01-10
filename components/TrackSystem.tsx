@@ -32,7 +32,6 @@ export function TrackSystem({ curve, debug = false, renderSkip = 0 }: TrackProps
     const sleeperPoints = useMemo(() => {
         const points = curve.getSpacedPoints(sleepersNumber);
         if (renderSkip > 0) {
-            const totalLen = curve.getLength();
             // Sleepers are roughly 0.6 apart. 
             // Determine how many to skip.
             const skipCount = Math.floor(renderSkip / 0.6);

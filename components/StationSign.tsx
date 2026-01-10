@@ -1,14 +1,27 @@
 
 import * as THREE from "three";
 import { Html, Text } from "@react-three/drei";
-import type { StationData } from "../app/page";
+import type { StationData } from "../data/stationData";
 import { VoxelSignFrame } from "./VoxelSignFrame";
 
+/**
+ * Props for the StationSign component.
+ * @property position Vector3 position of the sign.
+ * @property label Title text displayed on the sign.
+ * @property description Detailed description text.
+ * @property width Width of the sign frame (defaults to 4).
+ * @property subChapters Optional list of sub-sections (branches).
+ * @property onEnter Callback when entering a branch.
+ * @property onNext Callback for navigating to next sub-chapter.
+ * @property onPrev Callback for navigating to previous sub-chapter.
+ * @property onReturn Callback for returning to main track.
+ * @property currentSubIndex Index of the current sub-chapter being displayed.
+ */
 interface StationSignProps {
     position: THREE.Vector3;
     label: string;
     description?: string;
-    width?: number; // Calculated available width from LayoutContext
+    width?: number;
     subChapters?: StationData[];
     onEnter?: () => void;
     onNext?: () => void;
@@ -18,21 +31,12 @@ interface StationSignProps {
 }
 
 export function StationSign({ position, label, description, width = 4, subChapters, onEnter, onNext, onPrev, onReturn, currentSubIndex }: StationSignProps) {
-    // Fixed rotation:
-    // X: -90 deg (flat)
+    // Rotation: -90 degrees around X-axis to lie flat relative to track orientation
     const fixedRotation = new THREE.Euler(-Math.PI / 2, 0, 0);
 
     // Content Metrics
-    const PADDING_X = width < 10 ? 1.5 : 3.0; // Responsive padding
-    const CHAR_WIDTH = 0.5;
-
-    // Width Calculation
-    const labelWidth = (label.length * CHAR_WIDTH) + PADDING_X;
-    const hasLongDesc = description && description.length > 30;
-    const descTargetWidth = hasLongDesc ? width : 0;
 
     // Final Frame Width
-    const calculatedWidth = Math.max(labelWidth, descTargetWidth);
     const frameWidth = width;
 
     // Layout configuration
@@ -57,9 +61,9 @@ export function StationSign({ position, label, description, width = 4, subChapte
     const titleY = (frameHeight / 2) - 1.0;
     const descY = titleY - titleHeight - 0.2;
 
-    // Color Palette based on User's White BG preference:
+    // Color Palette
     // BG is White (#FFFFFF). Text should be Black/Dark.
-    const TITLE_COLOR = "#D4AF37"; // Gold Title still? Or Dark? Let's go Dark Brown/Gold.
+    const TITLE_COLOR = "#D4AF37"; // Dark Brown/Gold
     const DESC_COLOR = "#3E2723"; // Dark Brown
 
     // Determine if we are in "Main Mode" (Enter button) or "Branch Mode" (Nav buttons)
@@ -67,10 +71,9 @@ export function StationSign({ position, label, description, width = 4, subChapte
 
     return (
         <group position={position} rotation={fixedRotation}>
-            {/* ANCHOR BOTTOM SHIFT: 
-                Shift everything up by Half Height. 
-                Result: Local (0,0,0) is the Bottom Center of the sign.
-                Growth extends +Y (Backwards along track).
+            {/* 
+              Shift everything up by Half Height so local (0,0,0) is bottom center.
+              Growth extends +Y (Backwards along track).
             */}
             <group position={[0, frameHeight / 2, 0]}>
 
@@ -117,9 +120,7 @@ export function StationSign({ position, label, description, width = 4, subChapte
                 <Html
                     portal={{ current: document.getElementById('ui-portal') as HTMLElement }}
                     transform
-                    // Removed occlude="blending" to prevent black artifact. 
-                    // If we want occlusion, plain 'occlude' is safer but might hide buttons. 
-                    // Let's try NO occlusion first to ensure visibility, as buttons are in front.
+                    // No occlusion to ensure buttons are always visible/clickable
                     position={[0, -(frameHeight / 2) - 1.2, 0.2]}
                     style={{
                         width: `${frameWidth * 42}px`,

@@ -4,7 +4,7 @@ import { useFrame } from "@react-three/fiber";
 
 interface AlignmentAutopilotProps {
     targetT: number | null;
-    progress: React.MutableRefObject<number>;
+    progressRef: React.MutableRefObject<number>;
     curveLength: number;
     onComplete?: () => void;
     speed?: number;
@@ -12,7 +12,7 @@ interface AlignmentAutopilotProps {
 
 export function AlignmentAutopilot({
     targetT,
-    progress,
+    progressRef,
     curveLength,
     onComplete,
     speed = 25
@@ -20,11 +20,11 @@ export function AlignmentAutopilot({
     useFrame((state, delta) => {
         if (targetT === null || curveLength === 0) return;
 
-        const diff = targetT - progress.current;
-        const tSnap = 0.1 / curveLength; // Snap threshold ~0.1 units
+        const diff = targetT - progressRef.current;
+        const tSnap = 0.1 / curveLength; // Snap threshold is approximately 0.1 world units
 
         if (Math.abs(diff) < tSnap) {
-            progress.current = targetT;
+            progressRef.current = targetT;
             if (onComplete) onComplete();
             return;
         }
@@ -34,9 +34,9 @@ export function AlignmentAutopilot({
         const move = dir * tSpeed * delta;
 
         if (Math.abs(move) > Math.abs(diff)) {
-            progress.current = targetT;
+            progressRef.current = targetT;
         } else {
-            progress.current += move;
+            progressRef.current += move;
         }
     });
 

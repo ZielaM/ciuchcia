@@ -3,17 +3,17 @@ import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 
 interface BranchScrollHandlerProps {
-    viewOffset: React.MutableRefObject<number>;
+    viewOffsetRef: React.MutableRefObject<number>;
     isBranch: boolean;
     maxOffset: number;
 }
 
-export function BranchScrollHandler({ viewOffset, isBranch, maxOffset }: BranchScrollHandlerProps) {
+export function BranchScrollHandler({ viewOffsetRef, isBranch, maxOffset }: BranchScrollHandlerProps) {
     const { gl } = useThree();
 
     useEffect(() => {
         if (!isBranch) {
-            viewOffset.current = 0;
+            viewOffsetRef.current = 0;
             return;
         }
 
@@ -21,8 +21,8 @@ export function BranchScrollHandler({ viewOffset, isBranch, maxOffset }: BranchS
             e.preventDefault();
             // Scroll Down = Move Camera Up (Increase Offset)
             const speed = 0.02;
-            viewOffset.current -= e.deltaY * speed;
-            viewOffset.current = Math.max(0, Math.min(viewOffset.current, maxOffset));
+            viewOffsetRef.current -= e.deltaY * speed;
+            viewOffsetRef.current = Math.max(0, Math.min(viewOffsetRef.current, maxOffset));
         };
 
         let touchStartY = 0;
@@ -37,8 +37,8 @@ export function BranchScrollHandler({ viewOffset, isBranch, maxOffset }: BranchS
             touchStartY = y;
 
             const speed = 0.05;
-            viewOffset.current -= deltaY * speed;
-            viewOffset.current = Math.max(0, Math.min(viewOffset.current, maxOffset));
+            viewOffsetRef.current -= deltaY * speed;
+            viewOffsetRef.current = Math.max(0, Math.min(viewOffsetRef.current, maxOffset));
         };
 
         const target = window;
@@ -52,7 +52,7 @@ export function BranchScrollHandler({ viewOffset, isBranch, maxOffset }: BranchS
             target.removeEventListener('touchstart', handleTouchStart);
             target.removeEventListener('touchmove', handleTouchMove);
         };
-    }, [isBranch, maxOffset, gl, viewOffset]);
+    }, [isBranch, maxOffset, gl, viewOffsetRef]);
 
     return null;
 }

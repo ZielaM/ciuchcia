@@ -22,6 +22,7 @@ export function VoxelMap({ maxBranchLength = 0 }: { maxBranchLength?: number }) 
         for (let z = startZ; z < endZ; z++) {
             for (let x = startX; x < endX; x++) {
                 tempPositions.push([x, 0, z]);
+                // eslint-disable-next-line react-hooks/purity
                 const color = new THREE.Color().setHSL(0.3, 0.8, Math.random() * 0.2 + 0.3);
                 tempColors.push(Float32Array.from(color.toArray()));
             }
@@ -36,6 +37,7 @@ export function VoxelMap({ maxBranchLength = 0 }: { maxBranchLength?: number }) 
                 for (let x = branchStartX; x < branchEndX; x++) {
                     tempPositions.push([x, 0, z]);
                     // Slightly varied shade for branch ground
+                    // eslint-disable-next-line react-hooks/purity
                     const color = new THREE.Color().setHSL(0.32, 0.7, Math.random() * 0.2 + 0.3);
                     tempColors.push(Float32Array.from(color.toArray()));
                 }

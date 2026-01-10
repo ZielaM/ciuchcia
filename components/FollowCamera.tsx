@@ -64,6 +64,7 @@ export function FollowCamera({ curve, progress, isBranch, baseY = 16, offsetZ }:
         const targetCamX = THREE.MathUtils.lerp(mainCamX, branchCamX, tMix);
         const targetCamZ = THREE.MathUtils.lerp(mainCamZ, branchCamZ, tMix);
 
+        // eslint-disable-next-line react-hooks/immutability
         camera.position.x = targetCamX;
         camera.position.z = targetCamZ;
 

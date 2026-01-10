@@ -26,8 +26,6 @@ export function Train({ curve, position, progress }: TrainProps) {
     const wagonRef = useRef<THREE.Group>(null);
     const rearLocoRef = useRef<THREE.Group>(null);
 
-    const TRAIN_SPEED = 0.1;
-
     // Calculate spacing in 't' units (0..1)
     // The models are asymmetric, so the pivot point (center of rotation) is not in the geometric center.
     // Front Connection: Needs ~3.2 units distance.
@@ -42,23 +40,19 @@ export function Train({ curve, position, progress }: TrainProps) {
         };
     }, [curve]);
 
-    useFrame((state, delta) => {
+    useFrame(() => {
         if (!curve) return;
 
         // 1. Advance main progress (Front Locomotive)
-        // REMOVED: Automatic movement is now controlled by page.tsx
-        // progress.current = (progress.current + delta * TRAIN_SPEED) % 1;
+        // Automatic movement is controlled by page.tsx logic
 
         // 2. Helper function to update a specific carriage
         const updateCarriage = (ref: THREE.Group, offsetT: number) => {
-            let t = progress.current - offsetT;
+            const t = progress.current - offsetT;
 
             // LINEAR TRACK FIX: 
-            // Do NOT wrap t < 0 to 1. Just clamp or let getPointAt handle it (it clamps).
-            // This prevents the "Snake Ouroboros" effect where the tail is at the end of track.
-
-            // Optional: You might want to hide carriage if t < 0 or > 1?
-            // For now, let's just clamp to 0 for lookAt calculations to avoid errors.
+            // Clamp t to [0,1] to prevent wrapping or "snake ouroboros" artifacts where the tail 
+            // seemingly appears at the end of the track when t < 0.
             const clampedT = Math.max(0, Math.min(1, t));
 
             const point = curve.getPointAt(clampedT);
@@ -110,14 +104,10 @@ export function Train({ curve, position, progress }: TrainProps) {
 
             {/* --- UNIT 3: LOCOMOTIVE (REAR) --- */}
             <group ref={rearLocoRef}>
-                {/* This one is tricky. It's a locomotive facing BACKWARDS.
-                     So the model is rotated 180deg relative to travel direction?
-                     OR we just use the same model but flipped?
-                     
-                     If we use the standard model (Facing +X), rotate -90 -> Facing +Z (Travel Dir).
-                     But this is the rear engine. It should face -Z (Background).
-                     So we rotate +90 deg?
-                  */}
+                {/* 
+                    Rear locomotive faces backwards (-Z during travel).
+                    Rotated +90 degrees relative to standard orientation.
+                */}
                 <group rotation={[0, Math.PI / 2, 0]}>
                     <CarriageSegment />
                     <group position={[1.5, 0, 0]}>

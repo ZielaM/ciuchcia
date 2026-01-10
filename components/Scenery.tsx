@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import * as THREE from "three";
-import { Instance, Instances } from "@react-three/drei";
+
 
 // --- VOXEL TREE COMPONENT ---
 export function VoxelTree({ position }: { position: [number, number, number] }) {
@@ -43,7 +43,9 @@ export function Scenery({ curve, count = 40 }: SceneryProps) {
 
         for (let i = 0; i < count; i++) {
             // Random position in the map area
+            // eslint-disable-next-line react-hooks/purity
             const x = Math.random() * 60 - 10; // -10 to 50
+            // eslint-disable-next-line react-hooks/purity
             const z = Math.random() * 20 - 2;  // -2 to 18 (assuming map width)
 
             // Only keeping trees that are "safe" distance from track (Z=8 is track line approximately)
