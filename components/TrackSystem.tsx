@@ -9,24 +9,43 @@ const GAUGE = 0.7;
 interface TrackProps {
     curve: THREE.Curve<THREE.Vector3>;
     debug?: boolean; // help-line flag
+    renderSkip?: number; // Distance from start to skip rendering (for overlapping segments)
 }
 
-export function TrackSystem({ curve, debug = true }: TrackProps) {
+export function TrackSystem({ curve, debug = true, renderSkip = 0 }: TrackProps) {
 
     // Use "Spaced" points for rails to ensure uniform density even on long straight sections
     const railLinePoints = useMemo(() => {
-        return curve.getSpacedPoints(200);
-    }, [curve]);
+        const points = curve.getSpacedPoints(200);
+        if (renderSkip > 0) {
+            const totalLen = curve.getLength();
+            const ratio = renderSkip / totalLen;
+            const skipIndex = Math.floor(points.length * ratio);
+            return points.slice(skipIndex);
+        }
+        return points;
+    }, [curve, renderSkip]);
 
     const sleepersRef = useRef<THREE.InstancedMesh>(null);
     const sleepersNumber = useMemo(() => Math.floor(curve.getLength() / 0.6), [curve]);
 
     const sleeperPoints = useMemo(() => {
-        return curve.getSpacedPoints(sleepersNumber);
-    }, [curve, sleepersNumber]);
+        const points = curve.getSpacedPoints(sleepersNumber);
+        if (renderSkip > 0) {
+            const totalLen = curve.getLength();
+            // Sleepers are roughly 0.6 apart. 
+            // Determine how many to skip.
+            const skipCount = Math.floor(renderSkip / 0.6);
+            return points.slice(skipCount);
+        }
+        return points;
+    }, [curve, sleepersNumber, renderSkip]);
 
     useLayoutEffect(() => {
         if (!sleepersRef.current) return;
+
+        // Reset count if needed (though args controls max)
+        // With partial rendering, we might have fewer sleepers than args count.
 
         const tempObject = new THREE.Object3D();
 
@@ -55,8 +74,15 @@ export function TrackSystem({ curve, debug = true }: TrackProps) {
             sleepersRef.current!.setMatrixAt(i, tempObject.matrix);
         });
 
+        // Hide unused instances (if any remaining in buffer)
+        for (let i = sleeperPoints.length; i < sleepersNumber; i++) {
+            tempObject.position.set(0, -1000, 0); // Move out of view
+            tempObject.updateMatrix();
+            sleepersRef.current!.setMatrixAt(i, tempObject.matrix);
+        }
+
         sleepersRef.current.instanceMatrix.needsUpdate = true;
-    }, [sleeperPoints]);
+    }, [sleeperPoints, sleepersNumber]);
 
     return (
         <group>
@@ -70,6 +96,7 @@ export function TrackSystem({ curve, debug = true }: TrackProps) {
             )}
 
             {/* TRACK LAYERS */}
+            {/* Note: sleepersNumber is based on TOTAL length, but we might render fewer. That's fine. */}
             <instancedMesh ref={sleepersRef} args={[undefined, undefined, sleepersNumber]}>
                 <boxGeometry args={[GAUGE + 0.4, 0.15, 0.3]} />
                 <meshStandardMaterial color="brown" />

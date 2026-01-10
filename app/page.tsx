@@ -592,7 +592,7 @@ function SceneContent() {
 
             {/* Branch Tracks */}
             {Object.values(branchCurves).map((branchCurve, i) => (
-                <TrackSystem key={i} curve={branchCurve} debug={false} />
+                <TrackSystem key={i} curve={branchCurve} debug={false} renderSkip={LEAD_IN + 3} />
             ))}
 
             {/* --- BUFFER STOPS --- */}
