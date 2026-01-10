@@ -37,54 +37,33 @@ export function FollowCamera({ curve, progress, isBranch, baseY = 16, offsetZ }:
         // 2. Get Position of Train Center
         const trainPos = curve.getPointAt(tCenter);
 
-        // --- DUAL STATE LOGIC ---
-
-        // Target Mode:
-        // isBranch ? 1 : 0.
-        // Smoothly blend towards the target mode.
+        // DUAL STATE LOGIC:
+        // isBranch ? 1 : 0. Smoothly blend towards the target mode.
         const targetMode = isBranch ? 1 : 0;
-        const transitionSpeed = 1.0; // Speed of mode switch
+        const transitionSpeed = 1.0;
         modeRef.current = THREE.MathUtils.damp(modeRef.current, targetMode, transitionSpeed, delta);
 
-        // MIX FACTOR (0..1)
         const tMix = modeRef.current;
 
         // STATE 1: MAIN (tMix = 0)
-        // Camera X = 0 (Fixed World Center) -> Train appears on Left.
-        // Camera Z = Train Z (Centered Vertically).
+        // Camera X = 0 (Fixed World Center)
+        // Camera Z = Train Z
         const mainCamX = 0;
         const mainCamZ = trainPos.z;
 
         // STATE 2: BRANCH (tMix = 1)
-        // Camera X = Train X (Centered Horizontally).
-        // Camera Z = Train Z - Offset (Train appears at Bottom).
-
-        // DYNAMIC OFFSET: Ensure train is always near the bottom edge.
-        // Screen Bottom in World Units relative to Camera Center is (vpHeight / 2).
-        // We want Train to be `Margin` units above Bottom Edge.
-        // TrainZ = CameraZ + (vpHeight/2) - Margin.
-        // CameraZ = TrainZ - (vpHeight/2) + Margin.
-        // So Offset = (vpHeight/2) - Margin.
-
-        // We need to access vpHeight inside useFrame, but it's constant from useLayout.
-        // However, useLayout is a hook, we need to pass it in or trust it doesn't change often.
-        // Actually, let's pass it via props or closure if possible, but useLayout is fine here.
-        // Wait, useFrame is inside the component, so it captures 'vpHeight' from component scope.
-        // But we need to get vpHeight from useLayout hook first.
-
+        // Camera X = Train X
+        // Camera Z = Train Z - Offset
         const BOTTOM_MARGIN = 2.0;
         const dynamicOffset = (vpHeight / 2) - BOTTOM_MARGIN;
 
         const branchCamX = Math.max(0, trainPos.x);
         const branchCamZ = trainPos.z - dynamicOffset;
 
-        // Interpolate Targets based on tMix
-        // Use smoothstep for extra easing logic if desired, but damp is already smooth.
+        // Interpolate Targets
         const targetCamX = THREE.MathUtils.lerp(mainCamX, branchCamX, tMix);
         const targetCamZ = THREE.MathUtils.lerp(mainCamZ, branchCamZ, tMix);
 
-        // 4. Direct Movement (No Lag)
-        // User requested to remove delay relative to train.
         camera.position.x = targetCamX;
         camera.position.z = targetCamZ;
 

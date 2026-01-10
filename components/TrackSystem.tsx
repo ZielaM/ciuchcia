@@ -12,7 +12,7 @@ interface TrackProps {
     renderSkip?: number; // Distance from start to skip rendering (for overlapping segments)
 }
 
-export function TrackSystem({ curve, debug = true, renderSkip = 0 }: TrackProps) {
+export function TrackSystem({ curve, debug = false, renderSkip = 0 }: TrackProps) {
 
     // Use "Spaced" points for rails to ensure uniform density even on long straight sections
     const railLinePoints = useMemo(() => {
